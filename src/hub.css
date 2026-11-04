@@ -131,3 +131,5 @@
   .si-head h1{font-size:40px;line-height:44px}
 }
 @media (prefers-reduced-motion:reduce){ .apsheet{transition:none} }
+/* the Treasurer workflow's popover and zoom belong to the workflow only */
+.device:not([data-view="flow"]) :is(#morePop,#zoom){display:none!important}

@@ -3,7 +3,8 @@
 // kept on this device until the backend exists (see docs/design/UX_MAP.md).
 import { TR } from "./prototype.js";
 import { ROLES, getSession, setSession, me } from "./session.js";
-import { minutesList, openMinutes, newMinutes, showMinutes } from "./minutes.js";
+import { minutesList, openMinutes, showMinutes } from "./minutes.js";
+import { certList, openCerts, showCerts, TYPES as CERT_TYPES } from "./certs.js";
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -74,12 +75,20 @@ function docs() {
       st: () => ({ stage: m.final ? 4 : 0, log: [] }), open: () => { setView("sec"); openMinutes(m.id); },
     });
   }
+  for (const c of certList()) {
+    const n = String(c.names || "").split("\n").filter((x) => x.trim()).length;
+    out.push({
+      key: "ct:" + c.id, kind: "ct", id: c.id, title: c.event || "Untitled event", type: "Certificates",
+      meta: `${CERT_TYPES[c.type].label} · ${n} ${n === 1 ? "name" : "names"}`, label: n ? "Ready" : "No names",
+      st: () => ({ stage: n ? 4 : 0, log: [] }), open: () => { setView("cert"); openCerts(c.id); },
+    });
+  }
   return out;
 }
 const doc = (key) => docs().find((d) => d.key === key);
 const stageOf = (d) => d.st().stage;
 function statusLabel(d) { if (d.label) return d.label; const st = d.st(); return isReturned(st) ? "Returned" : STAGE[st.stage].b; }
-const needsMe = (d) => !d.past && d.kind !== "mn" && (NEXT[stageOf(d)] === me().role || (me().role === "treasurer" && isReturned(d.st())));
+const needsMe = (d) => !d.past && d.kind !== "mn" && d.kind !== "ct" && (NEXT[stageOf(d)] === me().role || (me().role === "treasurer" && isReturned(d.st())));
 
 /* ---------------- views ---------------- */
 function setView(v) {
@@ -88,6 +97,7 @@ function setView(v) {
   if (v === "hub") renderHub();
   if (v === "signin") renderSignin();
   if (v === "sec") showMinutes();
+  if (v === "cert") showCerts();
 }
 addEventListener("hub:home", () => setView("hub"));
 function openFlow(area, lrId) {
@@ -141,7 +151,7 @@ document.addEventListener("click", (e) => {
   const o = e.target.closest("[data-open]");
   if (o && o.closest("#hub")) { const d = doc(o.dataset.open); if (d) { if (needsMe(d) && me().role !== "treasurer") openPath(d); else d.open(); } return; }
   const p = e.target.closest("[data-path]");
-  if (p && p.closest("#hub")) { const d = doc(p.dataset.path); if (d) (d.kind === "mn" ? d.open() : openPath(d)); return; }
+  if (p && p.closest("#hub")) { const d = doc(p.dataset.path); if (d) (d.kind === "mn" || d.kind === "ct" ? d.open() : openPath(d)); return; }
   const tl = e.target.closest("[data-tool]");
   if (tl) { openTool(tl.dataset.tool); }
 });
@@ -166,8 +176,8 @@ function renderHome() {
     cont = `<section class="sheet"><div class="sheet-h"><h2>On its way</h2><p class="lede">Submitted documents that are with someone else.</p></div>
       ${moving.length ? `<ul class="rows">${moving.map(docRow).join("")}</ul>` : `<p class="empty">Nothing else is moving right now.</p>`}</section>`;
   } else if (ui.lens === "secretary") {
-    const md = all.filter((d) => d.kind === "mn").sort((a, b) => b.key.localeCompare(a.key)).slice(0, 4);
-    cont = `<section class="sheet"><div class="sheet-h"><h2>Recent minutes</h2><p class="lede">Drafts save on this device as you type.</p></div>
+    const md = all.filter((d) => d.kind === "mn" || d.kind === "ct").sort((a, b) => b.key.localeCompare(a.key)).slice(0, 4);
+    cont = `<section class="sheet"><div class="sheet-h"><h2>Recent minutes and certificates</h2><p class="lede">Drafts save on this device as you type.</p></div>
       ${md.length ? `<ul class="rows">${md.map(docRow).join("")}</ul>` : `<p class="empty">No minutes yet.</p>`}</section>`;
   } else {
     const list = drafts.slice(0, 4);
@@ -189,6 +199,7 @@ function openTool(k) {
   if (k === "br") return openFlow("req");
   if (k === "lr") { openFlow("liq"); TR.go("tracker", { force: true, instant: true, noFocus: true }); return; }
   if (k === "minutes") { setView("sec"); openMinutes(null); return; }
+  if (k === "certs") { setView("cert"); openCerts(null); return; }
   TR.toast(`${TOOLS[k][0]} is being drafted next`);
 }
 function renderTools() {
@@ -198,6 +209,7 @@ function renderTools() {
     if (k === "br") return S.stage === 0 ? (S.d.name ? "1 draft" : "No draft") : STAGE[S.stage].b;
     if (k === "lr") { const n = REQS.filter((r) => r.ok && TR.evData(r.id).stage === 0).length; return `${n} in draft`; }
     if (k === "minutes") { const n = minutesList().filter((m) => !m.final).length; return `${minutesList().length} meetings${n ? ` · ${n} draft` : ""}`; }
+    if (k === "certs") return `${certList().length} ${certList().length === 1 ? "batch" : "batches"}`;
     return "";
   };
   const rows = order.map((k) => `<li class="hrow single"><button class="go" type="button" data-tool="${k}"><span><span class="nm">${TOOLS[k][0]}</span><span class="mt">${TOOLS[k][1]}</span></span>
@@ -213,6 +225,7 @@ function libMatch(d) {
   if (ui.type === "br" && d.kind !== "br" && d.kind !== "bp") return false;
   if (ui.type === "lr" && d.kind !== "lr") return false;
   if (ui.type === "mn" && d.kind !== "mn") return false;
+  if (ui.type === "ct" && d.kind !== "ct") return false;
   return { all: true, draft: st.stage === 0 && !isReturned(st), mine: needsMe(d), sub: st.stage >= 1 && st.stage <= 3, ok: st.stage === 4, ret: isReturned(st) }[ui.filter];
 }
 function renderLibrary() {
@@ -221,7 +234,7 @@ function renderLibrary() {
   const ctl = `<section class="sheet"><div class="lib-ctl">
       <div class="search"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><input class="line-in" id="libQ" type="search" autocomplete="off" placeholder="Search by event or type" aria-label="Search the library" value="${esc(ui.q)}"></div>
       <div class="tags" role="radiogroup" aria-label="Status">${FILTERS.map(([k, l]) => tag(k, l, "flt", ui.filter)).join("")}</div>
-      <div class="tags" role="radiogroup" aria-label="Type">${[["all", "All types"], ["br", "Budget requests"], ["lr", "Liquidation"], ["mn", "Minutes"]].map(([k, l]) => tag(k, l, "typ", ui.type)).join("")}</div>
+      <div class="tags" role="radiogroup" aria-label="Type">${[["all", "All types"], ["br", "Budget requests"], ["lr", "Liquidation"], ["mn", "Minutes"], ["ct", "Certificates"]].map(([k, l]) => tag(k, l, "typ", ui.type)).join("")}</div>
     </div><ul class="rows" id="libRows">${libRows()}</ul></section>`;
   return head + ctl;
 }
@@ -404,4 +417,4 @@ $("#hdBadge")?.setAttribute("tabindex", "0");
 
 /* ---------------- boot ---------------- */
 if (!getSession()) setView("signin");
-else setView(ui.view === "flow" || ui.view === "sec" ? ui.view : "hub");
+else setView(["flow", "sec", "cert"].includes(ui.view) ? ui.view : "hub");

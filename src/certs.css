@@ -1,0 +1,42 @@
+/* =============================================================
+   Secretary · Certificates. Shell classes from the Treasurer flows;
+   this file adds the names editor and the A4 landscape certificate.
+   Positions come from "Certificate Facilitators GA.pdf" (842.25 × 595.5 pt).
+   ============================================================= */
+.device[data-view="cert"] :is(.app,#apphead,#dockWrap,.wordmark,#hub,#tabbar,#signin,#sec){display:none!important}
+#cert{display:none}
+.device[data-view="cert"] #cert{display:block;position:absolute;inset:0;overflow:auto;overscroll-behavior:contain;scroll-padding-bottom:140px}
+#cert svg.i{pointer-events:none}
+.device[data-view="cert"] #cert .tabs[aria-label="Steps"]{display:grid}
+.device[data-view="cert"] #cert .rail dl{display:grid}
+.device[data-view="cert"] #cert .rail .steps{display:block}
+@container app (min-width: 960px){ #cert .layout{padding-top:var(--s7)} #cert .rail{top:var(--s7)} }
+
+.c-names{font-weight:600;line-height:28px;min-height:168px}
+.c-flags{margin:var(--s4) 0 0;padding:var(--s3) var(--s3) var(--s3) var(--s6);border-radius:var(--r-ctl);background:var(--sun-bg);color:var(--sun);font-size:13px;line-height:18px;display:grid;gap:var(--s1)}
+.c-flags b{color:var(--ink)}
+.c-flip{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;gap:var(--s3);align-items:center;text-align:center;font-size:14px;line-height:20px}
+.c-flip .ghost{width:44px;padding:0;font-size:16px}
+.c-flip .ghost:disabled{opacity:.4}
+.c-warn{color:var(--sun);font-weight:600;font-size:12px}
+
+/* ---------- the certificate: sized by its own width (1pt = 100cqi / 842.25) ---------- */
+.cpaper{display:grid;gap:var(--s4)}
+.cpg{position:relative;container-type:inline-size;aspect-ratio:842.25/595.5;background:#fff url("/assets/cert-bg.jpg") center/100% 100% no-repeat;
+  border-radius:var(--r-paper);box-shadow:inset 1px 1px 0 #fff,var(--sh-paper);overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.c-in{--pt:calc(100cqi / 842.25);position:absolute;inset:0;color:#1800AD;font-family:"Libre Baskerville",Georgia,"Times New Roman",serif;text-align:center}
+.c-title{position:absolute;left:0;right:0;top:calc(var(--pt)*128);font-size:calc(var(--pt)*60);line-height:calc(var(--pt)*59);display:grid}
+.c-to{position:absolute;left:0;right:0;top:calc(var(--pt)*250);font-size:calc(var(--pt)*15);line-height:calc(var(--pt)*18);letter-spacing:.02em}
+.c-name{position:absolute;left:calc(var(--pt)*101);right:calc(var(--pt)*101);top:calc(var(--pt)*280);height:calc(var(--pt)*60);display:flex;align-items:center;justify-content:center;font-weight:700;white-space:nowrap;line-height:1}
+.c-body{position:absolute;left:calc(var(--pt)*80);right:calc(var(--pt)*80);top:calc(var(--pt)*351);font-size:calc(var(--pt)*13.8);line-height:calc(var(--pt)*18.8)}
+.c-body p{margin:0 0 calc(var(--pt)*3)}
+.c-body sup{font-size:.6em;line-height:0}
+.c-sig{position:absolute;top:calc(var(--pt)*500);width:calc(var(--pt)*400);display:grid}
+.c-sig.l{left:calc(var(--pt)*22)} .c-sig.r{left:calc(var(--pt)*418)}
+.c-sig b{font-weight:400;font-size:calc(var(--pt)*18);line-height:calc(var(--pt)*22)}
+.c-sig span{font-size:calc(var(--pt)*12);line-height:calc(var(--pt)*15)}
+
+/* print: exactly A4 landscape, a page per name */
+#printArea .cprint{display:block}
+#printArea .cprint .cpg{width:297mm;border-radius:0;box-shadow:none}
+@media print{ #printArea .cprint .cpg{height:210mm;aspect-ratio:auto;break-after:page} }
