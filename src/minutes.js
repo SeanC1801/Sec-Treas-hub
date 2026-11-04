@@ -3,6 +3,7 @@
 // The document copies the chapter's template (091126.docx): Letter 8.5 × 11 in,
 // Arial 12, the letterhead's top strip on every page, blue headings, names as mentions.
 import { TR } from "./prototype.js";
+import { me } from "./session.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -40,10 +41,10 @@ const SAMPLE = () => ({
   ],
   reminders: "Ensure all liquidation reports are prepared for submission the very next day after each respective event.",
   adjournment: "The meeting was officially adjourned at around 9:30 PM.",
-  final: true, updated: Date.parse("2026-09-12T10:00:00"),
+  final: true, updated: Date.parse("2026-09-12T10:00:00"), preparedBy: "Trizy Gabriel N. Nicdao",
 });
 const ROSTER0 = ["LAUREN KAILEY FRANCISCO", "TRIZY GABRIEL NICDAO", "ALISTAIRE MARC GULLIVER ESPINOSA", "ALEXIS YUMI SUZUKI", "JULLIAN MANALO", "ELICIA KLYDE MARTIGNE APOSTOL", "JAN ALDRINN FLORES", "IAN PATRICK FLORES", "CHRISTIAN DOMINIC LIWANAG", "MARK JEMIEL GUEVARRA", "SEAN KEITH HEAVEN CALING", "Jaeda Marthena Iral", "ZOIE CARLISLE MENDOZA", "JACOB ANTONIO", "LANCE JACOB SILVERIO", "PAUL ANDREI CALMA"];
-const blank = () => ({ id: "m" + Date.now().toString(36), date: new Date().toISOString().slice(0, 10), start: "", end: "", location: "", present: [], objectives: "", callToOrder: "", topics: [{ title: "", text: "" }], groups: [{ title: "", rows: [] }], reminders: "", adjournment: "", final: false, updated: Date.now() });
+const blank = () => ({ id: "m" + Date.now().toString(36), date: new Date().toISOString().slice(0, 10), start: "", end: "", location: "", present: [], objectives: "", callToOrder: "", topics: [{ title: "", text: "" }], groups: [{ title: "", rows: [] }], reminders: "", adjournment: "", final: false, updated: Date.now(), preparedBy: me().role === "secretary" ? me().name : null });
 
 let DB = load();
 function load() {
@@ -64,7 +65,7 @@ const dLong = (d) => (d ? new Intl.DateTimeFormat("en-US", { month: "long", day:
 const dShort = (d) => (d ? new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric" }).format(new Date(d + "T00:00")) : "No date");
 const t12 = (t) => { if (!t) return ""; const [h, m] = t.split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
 const lines = (s) => String(s || "").split("\n").map((x) => x.trim()).filter(Boolean);
-const secretary = () => (ORG.officers.find((o) => /secretary/i.test(o[1])) || ["Secretary"])[0];
+const secretary = (m) => (m && m.preparedBy) || ORG.secretaries[0];
 // names from the roster become mentions, as in the chapter's Google Docs minutes
 function mention(text) {
   let h = esc(text);
@@ -103,7 +104,7 @@ function blocks(m) {
   }
   if (lines(m.reminders).length) { H("Other Reminders"); UL(lines(m.reminders), true); }
   if (m.adjournment.trim()) { H("Adjournment"); B.push(`<p class="j">${mention(m.adjournment)}</p>`); }
-  B.push(`<div class="msig"><p>Prepared by:</p><p class="b">${esc(secretary())}</p><p class="mh-c">Secretary, ${esc(ORG.name)}</p></div>`);
+  B.push(`<div class="msig"><p>Prepared by:</p><p class="b">${esc(secretary(m))}</p><p class="mh-c">Secretary, ${esc(ORG.name)}</p></div>`);
   return B;
 }
 // lay blocks onto pages the way Word would: fill a page, then start the next

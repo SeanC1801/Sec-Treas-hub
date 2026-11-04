@@ -117,7 +117,7 @@
 @container app (min-width: 960px){
   .device[data-view="hub"] #tabbar{display:none}
   .hubhead{position:absolute;top:var(--s4);left:var(--s6);right:var(--s6);margin:0;z-index:7;height:68px;padding:0 var(--s3) 0 var(--s5);gap:var(--s5)}
-  .hubhead .hd-mark{display:block}
+  .hubhead .hd-mark{display:inline-flex}
   .hubhead .hh-t{display:none}
   .hubhead .hh-nav{display:inline-grid;padding:3px;border-radius:13px;background:rgba(11,42,74,.07)}
   .hubhead .areas button{height:40px;font-size:14px;padding:0 var(--s5)}
@@ -133,3 +133,15 @@
 @media (prefers-reduced-motion:reduce){ .apsheet{transition:none} }
 /* the Treasurer workflow's popover and zoom belong to the workflow only */
 .device:not([data-view="flow"]) :is(#morePop,#zoom){display:none!important}
+
+/* logos: AUF CCS (white, needs a shadow on light glass) + AUF-ACM; shadows fall down-right like everything else */
+.logos{display:inline-flex;align-items:center;gap:8px;flex:none}
+.logos img{display:block;width:auto;height:28px}
+.logos .ccs{filter:drop-shadow(0 0 1.5px rgba(12,74,152,.85)) drop-shadow(1px 2px 2px rgba(16,62,120,.35))}
+.logos .acm{height:24px;filter:drop-shadow(1px 2px 2px rgba(16,62,120,.25))}
+#apphead .hd-mark{display:inline-flex;align-items:center;gap:var(--s3)} .hd-mark{align-items:center;gap:var(--s3)}
+.hd-mark .logos img{height:30px} .hd-mark .logos .acm{height:26px}
+.si-mark{display:flex;align-items:center;gap:var(--s3)}
+.si-mark .logos img{height:40px} .si-mark .logos .acm{height:34px}
+.hub-title .logos{margin-bottom:var(--s4)}
+.hub-title .logos img{height:36px} .hub-title .logos .acm{height:31px}

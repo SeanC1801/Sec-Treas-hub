@@ -27,6 +27,9 @@ const ORG={short:"ACM",name:"AUF-ACM Student Chapter",
   to:{name:"Wendel B. Lacson",role:"President",org:"CCS-CSC"},
   through:{name:"Alec Ezekiel M. Dela Peña",role:"Treasurer",org:"CCS-CSC"},
   president:"Lauren Kailey A. Francisco",treasurer:"Alexis Yumi M. Suzuki",adviser:"Melissa M. Pantig",
+  /* who can prepare documents; each document prints whoever prepared it */
+  treasurers:["Alexis Yumi M. Suzuki","Christian Dominic Liwanag"],secretaries:["Trizy Gabriel N. Nicdao","Ian Patrick Flores"],
+  nick:{"Christian Dominic Liwanag":"Nico","Lauren Kailey A. Francisco":"Lauren","Alexis Yumi M. Suzuki":"Alexis","Trizy Gabriel N. Nicdao":"Trizy","Ian Patrick Flores":"Ian"},
   officers:[["Ms. Melissa Pantig","ACM Adviser","BSCS Program Chair"],["Lauren Kailey A. Francisco","Chair","BSCS 3A"],["Alistaire Marc E. Espinosa","Vice Chair","BSCS 3A"],
     ["Trizy Gabriel N. Nicdao","Secretary","BSCS 3A"],["Alexis Yumi M. Suzuki","Treasurer","BSCS 3A"],["Paul Andrei S. Calma","P.R.O","BSCS 4A"]]};
 
@@ -101,7 +104,7 @@ function parse(text){
 let saveT;
 function setSave(kind){$$("[data-save]").forEach(s=>{s.classList.remove("saving","offline");const t=s.querySelector(".t"),sr=s.querySelector("[data-save-sr]");
   const txt=kind==="saving"?"Saving…":kind==="offline"?"Saved on this device":"Saved";if(kind!=="saved")s.classList.add(kind);t.textContent=txt;if(sr)sr.textContent=txt;});}
-function saved(){persist();if(S.offline){setSave("offline");return;}setSave("saving");clearTimeout(saveT);saveT=setTimeout(()=>setSave("saved"),650);}
+function saved(){stampPreparer();persist();if(S.offline){setSave("offline");return;}setSave("saving");clearTimeout(saveT);saveT=setTimeout(()=>setSave("saved"),650);}
 
 /* ================= budget lines: quick add [Bea] =================
    "Food 450 light refreshments for guests" · "Prizes 500 para sa minigames" · "450 snacks for the guests" · "Cash prizes ₱1,000" */
@@ -251,7 +254,7 @@ function paperHTML(){const d=S.d,T=total(),co=d.cohost.on,ask=co&&Number(d.cohos
     <p class="lt-p">In view of the objectives of the activity, we respectfully request the support and approval of the ${esc(ORG.to.org)} for the proposed budget.</p>
     <p class="lt-thanks">Thank you very much!</p>
     <p class="lt-sub">Respectfully submitted,</p>
-    <div class="sgs two">${sig(ORG.president,"President")}${sig(ORG.treasurer,"Treasurer")}</div>
+    <div class="sgs two">${sig(ORG.president,"President")}${sig(prep(S),"Treasurer")}</div>
     <p class="lt-sub">Noted by:</p>
     <div class="sgs">${sig(ORG.adviser,"Faculty Adviser")}</div>`);
   const P=d.program.filter(p=>p.seg.trim()||p.desc.trim());
@@ -529,7 +532,7 @@ const gAct=g=>g.rows.reduce((a,b)=>a+lTot(b),0), gPen=g=>g.rows.some(i=>!lp(i));
 /* the approved request's budget categories come in; receipts are added under them */
 function pickReq(id){if(L.req&&L.req.id!==id)LRS[L.req.id]=snapL();const r=REQS.find(x=>x.id===id);L.req=r;L.open=null;
   L.budget=r.items.map(([name,note,allot],i)=>({id:"b"+i,name,note,allot}));
-  const s=LRS[id];if(s){L.items=s.items;L.uid=s.uid;L.stage=s.stage;L.submitted=s.submitted;L.log=s.log||[];}else{L.items=buildFromTrack(r);L.uid=L.items.length;L.stage=0;L.submitted=null;L.log=[];}
+  const s=LRS[id];if(s){L.items=s.items;L.uid=s.uid;L.stage=s.stage;L.submitted=s.submitted;L.log=s.log||[];L.preparedBy=s.preparedBy||null;}else{L.items=buildFromTrack(r);L.uid=L.items.length;L.stage=0;L.submitted=null;L.log=[];L.preparedBy=null;}
   L.d={name:r.name,date:r.date,venue:r.venue,fund:r.fund,allot:String(reqTot(r))};L.shown=lActual();}
 function clearReq(){L.req=null;L.budget=[];L.items=[];L.uid=0;L.open=null;L.submitted=null;L.d={name:"",date:"",venue:"",fund:"Org funds",allot:""};L.shown=0;}
 function fillCID(){}
@@ -549,7 +552,7 @@ const nextRef=()=>{const n=new Set(L.items.filter(i=>/^Receipt #\d+$/.test(i.ref
 /* ================= liquidation: the semester tracker (the Drive sheet, inside the Hub) =================
    One entry feeds both: receipts typed into a report are the tracker's rows. */
 const LRS={};
-const snapL=()=>({items:JSON.parse(JSON.stringify(L.items)),budget:L.budget,uid:L.uid,stage:L.stage,submitted:L.submitted,log:L.log||[]});
+const snapL=()=>({items:JSON.parse(JSON.stringify(L.items)),budget:L.budget,uid:L.uid,stage:L.stage,submitted:L.submitted,log:L.log||[],preparedBy:L.preparedBy||null});
 function buildFromTrack(r){return (TRACK_RC[r.id]||[]).map((x,k)=>{const[gi,name,store,inv,ref,u,p]=x;return{id:k+1,g:"b"+gi,name,units:u,unit:"",price:p,store,inv,ref};});}
 function evData(id){const r=REQS.find(x=>x.id===id);
   if(L.req&&L.req.id===id)return{r,items:L.items,stage:L.stage};
@@ -706,7 +709,7 @@ function lpaperHTML(){const G=lGroups(),d=L.d,A=lAllot(),T=lActual(),df=A-T;
     <p class="lt-p">On behalf of the ${esc(ORG.name)}, we present the ${act} liquidation report that took place on <b>${d.date?dDoc(d.date):'<span class="p-need">date</span>'}</b>, with a total amount of <b>${wordsCaps(T)} (${pm(T)})</b> to your esteemed office.</p>
     <p class="lt-p">The liquidation table, including the corresponding receipts, has been appropriately enclosed on the succeeding page.</p>
     <p class="lt-thanks">Thank you very much!</p>
-    <div class="sgs two lab2"><div><p class="lt-sub">Prepared by:</p>${sig(ORG.president,"President")}</div><div><p class="lt-sub">Endorsed by:</p>${sig(ORG.treasurer,"Treasurer")}</div></div>
+    <div class="sgs two lab2"><div><p class="lt-sub">Prepared by:</p>${sig(ORG.president,"President")}</div><div><p class="lt-sub">Endorsed by:</p>${sig(prep(L),"Treasurer")}</div></div>
     <p class="lt-sub">Noted by:</p>
     <div class="sgs">${sig(ORG.adviser,"Faculty Adviser")}</div>`);
   let rows="";
@@ -748,6 +751,10 @@ function setArea(a,o={}){if(a===AREA&&!o.force)return;AREA=a;
   closePop();closeZoom(true);$("#resetConfirm").hidden=true;$("#lresetConfirm").hidden=true;
   go(D().step,{instant:true,noFocus:true,force:true});}
 
+/* who prepared it: the first Treasurer who works on a document signs it */
+function stampPreparer(){const d=D(),u=me();if(d&&!d.preparedBy&&u.role==="treasurer"&&(AREA==="req"||L.req))d.preparedBy=u.name;}
+const prep=d=>(d&&d.preparedBy)||ORG.treasurer;
+
 /* status log: who moved a document and when */
 function logStage(doc,to,note){const u=me();(doc.log||(doc.log=[])).push({to,at:Date.now(),by:u.name,role:u.role,note:note||""});}
 
@@ -757,7 +764,7 @@ function setStamp(d){$("#stampDate").textContent=new Intl.DateTimeFormat("en-PH"
 function persist(){if(!BOOTED)return;
   const lrs={...LRS};if(L.req)lrs[L.req.id]=snapL();
   const data={v:1,at:Date.now(),area:AREA,
-    S:{items:S.items,uid:S.uid,step:S.step,stage:S.stage,submitted:S.submitted,d:S.d,log:S.log||[]},
+    S:{items:S.items,uid:S.uid,step:S.step,stage:S.stage,submitted:S.submitted,d:S.d,log:S.log||[],preparedBy:S.preparedBy||null},
     L:{step:L.step,req:L.req&&L.req.id},LRS:lrs};
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(data));}catch(e){}}
 function loadSaved(){try{const d=JSON.parse(localStorage.getItem(SAVE_KEY)||"null");return d&&d.v===1?d:null;}catch(e){return null;}}
@@ -776,7 +783,7 @@ addEventListener("offline",()=>{S.offline=true;setSave("offline");toast("You’r
 addEventListener("online",()=>{S.offline=false;saved();});
 
 /* ================= sample data (first run only; ?state= and ?reset in the URL for testing) ================= */
-function setState(m){S.mode=m;S.log=[];S.uid=0;S.open=null;S.offline=m==="offline";S.submitted=null;S.stage=0;
+function setState(m){S.mode=m;S.log=[];S.preparedBy=null;S.uid=0;S.open=null;S.offline=m==="offline";S.submitted=null;S.stage=0;
   if(m==="empty"){S.items=[];S.d=blankD();}
   else{S.items=SAMPLE.map(s=>({id:++S.uid,...s}));
     S.d={...blankD(),name:"ACM-AUF Hackathon 2026",date:"2026-11-21",venue:"Computer Laboratory",participants:"AUF CCS Students",allot:m==="over"?"10000":"15000",
@@ -816,5 +823,5 @@ BOOTED=true;persist();
 if(qs.get("type")){(AREA==="liq"?$("#lqa"):$("#qa")).value=qs.get("type");(AREA==="liq"?renderReadsL:renderReads)();}
 
 /* the hub shell (src/hub.js) drives the flows through this */
-export const TR={S,L,LRS,REQS,ORG,STAGE,evData,evAllot,reqTot,lTot,total,go,setArea,pickReq,openEvent,snapL,saved,toast,logStage,setStamp,
+export const TR={prep,S,L,LRS,REQS,ORG,STAGE,evData,evAllot,reqTot,lTot,total,go,setArea,pickReq,openEvent,snapL,saved,toast,logStage,setStamp,
   area:()=>AREA,doc:()=>D(),stampFmt};

@@ -15,6 +15,10 @@ const when = (t) => new Intl.DateTimeFormat("en-PH", { month: "short", day: "num
 const { S, L, LRS, REQS, ORG, STAGE } = TR;
 const device = $("#device");
 
+/* ---------------- logos: AUF College of Computer Studies + AUF-ACM ---------------- */
+const LOGOS = `<span class="logos" role="img" aria-label="AUF College of Computer Studies and AUF-ACM"><img class="ccs" src="/assets/auf-ccs.png" alt="" width="678" height="464"><img class="acm" src="/assets/auf-acm.png" alt="" width="1122" height="422"></span>`;
+document.querySelectorAll(".hd-mark").forEach((a) => a.insertAdjacentHTML("afterbegin", LOGOS));
+
 /* ---------------- UI state (per viewer convenience) ---------------- */
 const UI_KEY = "sectreas:ui:v1";
 const ui = Object.assign({ view: "hub", tab: "home", lens: "treasurer", q: "", filter: "all", type: "all" }, read(UI_KEY));
@@ -28,12 +32,13 @@ const ORG0 = JSON.parse(JSON.stringify(ORG));
   const o = read(ORG_KEY);
   if (o && o.v === 1) {
     ORG.to = o.to; ORG.through = o.through; ORG.president = o.president; ORG.treasurer = o.treasurer; ORG.adviser = o.adviser; ORG.officers = o.officers;
+    if (o.treasurers) ORG.treasurers = o.treasurers; if (o.secretaries) ORG.secretaries = o.secretaries;
   }
 })();
 function saveOrg() {
-  try { localStorage.setItem(ORG_KEY, JSON.stringify({ v: 1, to: ORG.to, through: ORG.through, president: ORG.president, treasurer: ORG.treasurer, adviser: ORG.adviser, officers: ORG.officers })); } catch {}
+  try { localStorage.setItem(ORG_KEY, JSON.stringify({ v: 1, to: ORG.to, through: ORG.through, president: ORG.president, treasurer: ORG.treasurer, adviser: ORG.adviser, officers: ORG.officers, treasurers: ORG.treasurers, secretaries: ORG.secretaries })); } catch {}
 }
-const secretaryName = () => (ORG.officers.find((o) => /secretary/i.test(o[1])) || ["Secretary"])[0];
+
 
 /* ---------------- documents ---------------- */
 // stage: 0 Draft · 1 With President · 2 With Adviser · 3 With CSC · 4 Approved
@@ -133,7 +138,7 @@ document.addEventListener("click", (e) => {
 function titleBlock(kicker, h1, extra = "") {
   // phone: at the top of the page; desktop: in the rail
   $("#hubRail").innerHTML = `<div class="kicker">${esc(kicker)}</div><h1>${esc(h1)}</h1>${extra}`;
-  return `<div class="hub-title"><div class="kicker">${esc(kicker)}</div><h1>${esc(h1)}</h1>${extra}</div>`;
+  return `<div class="hub-title">${ui.tab === "home" ? LOGOS : ""}<div class="kicker">${esc(kicker)}</div><h1>${esc(h1)}</h1>${extra}</div>`;
 }
 function renderHub() {
   renderChrome();
@@ -158,7 +163,7 @@ document.addEventListener("click", (e) => {
 
 /* ---- Home ---- */
 const hello = () => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; };
-const firstName = (n) => String(n).replace(/^(Ms\.|Mr\.|Mrs\.|Dr\.)\s*/i, "").split(" ")[0];
+const firstName = (n) => (ORG.nick && ORG.nick[n]) || String(n).replace(/^(Ms\.|Mr\.|Mrs\.|Dr\.)\s*/i, "").split(" ")[0];
 function renderHome() {
   const u = me(), all = docs();
   const mine = all.filter(needsMe);
@@ -253,7 +258,10 @@ document.addEventListener("click", (e) => {
 /* ---- Profile ---- */
 const SIGN = [
   ["president", "Chapter President", () => ORG.president, (v) => (ORG.president = v)],
-  ["treasurer", "Chapter Treasurer", () => ORG.treasurer, (v) => (ORG.treasurer = v)],
+  ["t0", "Treasurer", () => ORG.treasurers[0], (v) => { ORG.treasurers[0] = v; ORG.treasurer = v; }],
+  ["t1", "Treasurer", () => ORG.treasurers[1], (v) => (ORG.treasurers[1] = v)],
+  ["s0", "Secretary", () => ORG.secretaries[0], (v) => (ORG.secretaries[0] = v)],
+  ["s1", "Secretary", () => ORG.secretaries[1], (v) => (ORG.secretaries[1] = v)],
   ["adviser", "Adviser", () => ORG.adviser, (v) => (ORG.adviser = v)],
   ["through", "CSC Treasurer (the letter goes through)", () => ORG.through.name, (v) => (ORG.through.name = v)],
   ["to", "CSC President (the letter is addressed to)", () => ORG.to.name, (v) => (ORG.to.name = v)],
@@ -263,13 +271,13 @@ function renderProfile() {
   const head = titleBlock("AUF-ACM Student Chapter", "Profile", `<p>Your account, the signatories and the officer list.</p>`);
   const you = `<section class="sheet"><div class="sheet-h"><h2>You</h2></div><div class="pf-me"><div><div class="nm">${esc(u.name)}</div><div class="mt">${ROLES[u.role]} · Signed in with your @auf.edu.ph Google account</div></div>
     <button class="ghost" type="button" id="signOut">Sign out</button></div></section>`;
-  const sig = `<section class="sheet"><div class="sheet-h"><h2>Signatories</h2><p class="lede">These names print on the Budget Request letter and the Liquidation report.</p></div>
+  const sig = `<section class="sheet"><div class="sheet-h"><h2>Signatories</h2><p class="lede">Each document prints the Treasurer or Secretary who prepared it. The others print on every Budget Request and Liquidation report.</p></div>
     <div class="pf-grid">${SIGN.map(([k, l, g]) => `<div class="field"><label for="sg-${k}">${l}</label><input class="line-in" id="sg-${k}" data-sign="${k}" autocomplete="off" value="${esc(g())}"></div>`).join("")}</div></section>`;
-  const offs = `<section class="sheet"><div class="sheet-h"><h2>Officers</h2><p class="lede">Used for attendance in Minutes and for who you can sign in as.</p></div>
+  const offs = `<section class="sheet"><div class="sheet-h"><h2>Officers</h2><p class="lede">These print in the letterhead footer of the Budget Request and Liquidation report.</p></div>
     <div class="off-head" aria-hidden="true"><span>Name</span><span>Position</span><span class="sec">Section</span><span></span></div>
     <div id="offRows">${ORG.officers.map(offRow).join("")}</div>
     <div class="pf-foot"><button class="textbtn" type="button" id="offAdd">+ Add an officer</button><button class="textbtn danger" type="button" id="orgReset">Restore the chapter’s defaults</button></div>
-    <p class="note" style="padding:0 var(--s4) var(--s5)">The printed letterhead’s footer is part of the image, so it doesn’t change with these names yet.</p></section>`;
+    </section>`;
   return head + you + sig + offs;
 }
 const offRow = (o, i) => `<div class="off-row" data-off="${i}">
@@ -293,33 +301,33 @@ document.addEventListener("click", (e) => {
     return;
   }
   if (e.target.closest("#orgReset")) {
-    const before = JSON.parse(JSON.stringify({ to: ORG.to, through: ORG.through, president: ORG.president, treasurer: ORG.treasurer, adviser: ORG.adviser, officers: ORG.officers }));
+    const before = JSON.parse(JSON.stringify({ to: ORG.to, through: ORG.through, president: ORG.president, treasurer: ORG.treasurer, adviser: ORG.adviser, officers: ORG.officers, treasurers: ORG.treasurers, secretaries: ORG.secretaries }));
     Object.assign(ORG, JSON.parse(JSON.stringify(ORG0))); saveOrg(); renderHub();
     TR.toast("Chapter defaults restored", () => { Object.assign(ORG, before); saveOrg(); renderHub(); });
   }
 });
 
 /* ---------------- Sign in (draft: no real Google yet) ---------------- */
-let signAs = "treasurer";
+let signAs = 0;
 function people() {
-  return [["treasurer", ORG.treasurer], ["president", ORG.president], ["adviser", ORG.adviser], ["secretary", secretaryName()]];
+  return [...ORG.treasurers.map((n) => ["treasurer", n]), ["president", ORG.president], ["adviser", ORG.adviser], ...ORG.secretaries.map((n) => ["secretary", n])];
 }
 function renderSignin() {
-  $("#signin").innerHTML = `<div class="si-mark">sectreas hub</div><div class="signin-l">
+  $("#signin").innerHTML = `<div class="si-mark">${LOGOS}<span>sectreas hub</span></div><div class="signin-l">
     <div class="si-head"><div class="kicker" style="font-size:13px;font-weight:600;color:var(--ink-2)">AUF-ACM Student Chapter</div><h1>Treasurer and Secretary documents, in the chapter’s format</h1>
       <p>For chapter officers only. Sign in with your @auf.edu.ph Google account.</p></div>
     <div class="sheet si-sheet">
       <button class="key" type="button" id="siGo">Continue with Google<svg class="i"><use href="#i-arrow"/></svg></button>
       <div class="si-as"><h2>Draft only: sign in as</h2>
-        <div role="radiogroup" aria-label="Sign in as">${people().map(([k, n]) => `<button class="reqrow" type="button" role="radio" aria-checked="${k === signAs}" data-as="${k}"><span class="rd" aria-hidden="true"></span><span><span class="nm">${esc(n)}</span><span class="mt">${ROLES[k]}</span></span><span></span></button>`).join("")}</div>
+        <div role="radiogroup" aria-label="Sign in as">${people().map(([k, n], i) => `<button class="reqrow" type="button" role="radio" aria-checked="${i === signAs}" data-as="${i}"><span class="rd" aria-hidden="true"></span><span><span class="nm">${esc(n)}</span><span class="mt">${ROLES[k]}</span></span><span></span></button>`).join("")}</div>
       </div>
     </div></div>`;
 }
 document.addEventListener("click", (e) => {
   const a = e.target.closest("[data-as]");
-  if (a) { signAs = a.dataset.as; renderSignin(); $(`[data-as="${signAs}"]`).focus(); return; }
+  if (a) { signAs = Number(a.dataset.as); renderSignin(); $(`[data-as="${signAs}"]`).focus(); return; }
   if (e.target.closest("#siGo")) {
-    const p = people().find((x) => x[0] === signAs);
+    const p = people()[signAs] || people()[0];
     setSession({ role: p[0], name: p[1] });
     ui.tab = "home"; ui.lens = p[0] === "secretary" ? "secretary" : "treasurer";
     setView("hub");
@@ -334,7 +342,7 @@ function renderPath() {
   const d = doc(apKey); if (!d) return closePath();
   const st = d.st(), sg = st.stage, u = me(), ret = isReturned(st);
   const ROWS = [
-    [1, "Treasurer", ORG.treasurer, "Prepares and submits", "Submitted"],
+    [1, "Treasurer", TR.prep(st), "Prepares and submits", "Submitted"],
     [2, "President", ORG.president, "Signs", "Signed"],
     [3, "Adviser", ORG.adviser, "Notes", "Noted"],
     [4, "CSC Treasurer", ORG.through.name, "Receives", "Received"],
