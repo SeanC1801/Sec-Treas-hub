@@ -201,7 +201,7 @@ function renderDock(){
   else if(st==="review"){
     d.innerHTML=`<button class="ghost desk-only" type="button" data-act="copy"><svg class="i"><use href="#i-link"/></svg>Copy link</button>
       <button class="ghost" type="button" id="moreBtn" aria-haspopup="menu" aria-expanded="false"><svg class="i"><use href="#i-down"/></svg><span class="desk-only">Download</span><span class="phone-only">More</span></button>
-      ${printBtn}<span style="flex:1"></span><button class="key" type="button" id="submitBtn">Send to President<svg class="i"><use href="#i-arrow"/></svg></button>`;}
+      ${printBtn}<span style="flex:1"></span><button class="key" type="button" id="submitBtn" aria-label="Send to President">Send<span class="sub-to"> to President</span><svg class="i"><use href="#i-arrow"/></svg></button>`;}
   else if(stg===1){
     d.innerHTML=`<div class="msg"><b>Sent to the President</b><span class="desk-only">For signing. The status above updates as it moves.</span></div><button class="ghost" type="button" id="unsend">Undo send</button><button class="key" type="button" id="homeBtn">Home</button>`;}
   else if(stg<4){

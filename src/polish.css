@@ -1,0 +1,33 @@
+/* =============================================================
+   Phone polish (Nov 2026 pass): thumb-sized targets, docks that make
+   room for the keyboard, and the review dock at 320–375 px.
+   ============================================================= */
+
+/* Review dock: "Send to President" shortens to "Send" on narrow phones; More becomes an icon */
+@container app (max-width: 400px){
+  .dock .sub-to{display:none}
+  #moreBtn .phone-only{display:none}
+  #moreBtn{width:44px;padding:0}
+}
+
+/* touch targets: 44 px tall on touch screens (Apple HIG; WCAG 2.5.5) */
+@media (pointer:coarse){
+  .tagbtn,.ghost.sm,.key.sm{min-height:44px}
+  .areas button{min-height:40px}
+  .hh-role button{height:40px}
+  .stbtn{min-height:44px;display:inline-flex;align-items:center;justify-content:flex-end}
+  .stepbtn{min-height:44px;min-width:44px}
+  #libF{min-height:44px}
+}
+
+/* the keyboard is up: docks and the tab bar slide away so they never cover the field */
+.device.kb #dockWrap,.device.kb #sec .dock-wrap,.device.kb #cert .dock-wrap{transform:translateY(120%);opacity:0;pointer-events:none}
+.device.kb #tabbar{transform:translateY(130%);opacity:0;pointer-events:none}
+#tabbar,#sec .dock-wrap,#cert .dock-wrap{transition:transform .2s var(--out),opacity .2s var(--out)}
+@media (prefers-reduced-motion:reduce){ #tabbar,#sec .dock-wrap,#cert .dock-wrap{transition:opacity .2s linear} }
+
+/* a focused field is never tucked under the sticky top bar */
+#hub,#sec,#cert{scroll-padding-top:96px;scroll-padding-bottom:120px}
+
+/* proof photo slots: a little shorter on phones */
+.ph-slot{aspect-ratio:4/5}
