@@ -1,0 +1,24 @@
+/* Liquidation · Proof (optional): winner IDs and other photos */
+.lproof{display:grid;gap:var(--s3)}
+.lproof svg.i{pointer-events:none}
+.ph-places{display:grid;gap:var(--s5);margin-top:var(--s5)}
+.ph-place{display:grid;gap:var(--s2)}
+.ph-h{font-weight:700;font-size:14px;line-height:20px}
+.ph-pair{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3)}
+.ph-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:var(--s3)}
+.ph-page{display:grid;gap:var(--s3);margin-top:var(--s5);padding-top:var(--s5);border-top:1px solid var(--rule)}
+/* an empty slot is a ruled box in pencil; a filled one shows the photo */
+.ph-slot{all:unset;box-sizing:border-box;display:grid;place-items:center;align-content:center;gap:var(--s2);aspect-ratio:3/4;border:1.5px dashed #9DB4CB;border-radius:var(--r-ctl);background:var(--open);color:var(--pencil);font-size:13px;line-height:18px;font-weight:600;text-align:center;cursor:pointer;padding:var(--s2)}
+.ph-slot svg.i{width:24px;height:24px}
+.ph-slot:focus-visible{box-shadow:var(--ring)}
+.ph-slot.has{border:0;background:#fff;box-shadow:inset 1px 1px 0 #fff,var(--sh-paper);padding:0;align-content:stretch;grid-template-rows:minmax(0,1fr) auto;cursor:default;overflow:hidden}
+.ph-slot.has img{width:100%;height:100%;object-fit:cover;display:block}
+.ph-acts{display:flex;justify-content:space-between;gap:var(--s3);padding:var(--s1) var(--s3);justify-self:stretch}
+.ph-slot.has img{justify-self:stretch}
+.ph-acts .textbtn{margin:0;padding:var(--s2) 0;font-size:12px}
+@media (hover:hover) and (pointer:fine){ button.ph-slot:hover{background:#EAF3FC;color:var(--action)} }
+
+/* on the paper: the CSC table style, photos fit their cell */
+.ph-t td.ph-cell{height:42cqi;padding:1cqi;vertical-align:middle;text-align:center}
+.ph-t td.ph-cell img{max-width:100%;max-height:40cqi;object-fit:contain;display:inline-block}
+.ph-t{table-layout:fixed}

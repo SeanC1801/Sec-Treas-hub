@@ -1,4 +1,5 @@
 import { me } from "./session.js";
+import { PHOTOS, loadPhotos, addPhoto, dropPhoto, keepPhoto } from "./photos.js";
 
 /* ================= data ================= */
 /* v6: a budget request is a list of category lines (category · notes · amount), as the CSC template prints it */
@@ -190,11 +191,13 @@ function renderDock(){
     d.innerHTML=`<div class="tot"><div class="l">Next</div><div class="s" style="font-size:13px">${hint}</div></div><button class="key" type="button" data-to="${nx}">Continue<svg class="i"><use href="#i-arrow"/></svg></button>`;}
   else if(st==="items"){
     if(liq){const r=remainL();
-      d.innerHTML=`<div class="tot" aria-live="polite"><div class="l">Actual expense</div><div class="v" id="totV">${peso(L.shown)}</div><div class="s ${r.c}">${r.t}</div></div><button class="key" type="button" data-to="review">Preview<svg class="i"><use href="#i-arrow"/></svg></button>`;
+      d.innerHTML=`<div class="tot" aria-live="polite"><div class="l">Actual expense</div><div class="v" id="totV">${peso(L.shown)}</div><div class="s ${r.c}">${r.t}</div></div><button class="key" type="button" data-to="proof">Continue<svg class="i"><use href="#i-arrow"/></svg></button>`;
       countTo(lActual());}
     else{const r=remainLine();
       d.innerHTML=`<div class="tot" aria-live="polite"><div class="l">${S.d.cohost.on?ORG.short+" share":"Total"}</div><div class="v" id="totV">${peso(S.shown)}</div><div class="s ${r.c}">${r.t}</div></div><button class="key" type="button" data-to="review">Preview<svg class="i"><use href="#i-arrow"/></svg></button>`;
       countTo(total());}}
+  else if(st==="proof"){const P=proofState();
+    d.innerHTML=`<div class="tot"><div class="l">${P.need?"Proof":"Next"}</div><div class="s ${P.need?"over":""}" style="font-size:13px">${P.need?`${P.need} ${P.need===1?"ID photo":"ID photos"} missing`:"Preview & print"}</div></div><button class="key" type="button" data-to="review">Preview<svg class="i"><use href="#i-arrow"/></svg></button>`;}
   else if(st==="review"){
     d.innerHTML=`<button class="ghost desk-only" type="button" data-act="copy"><svg class="i"><use href="#i-link"/></svg>Copy link</button>
       <button class="ghost" type="button" id="moreBtn" aria-haspopup="menu" aria-expanded="false"><svg class="i"><use href="#i-down"/></svg><span class="desk-only">Download</span><span class="phone-only">More</span></button>
@@ -272,7 +275,7 @@ function paperHTML(){const d=S.d,T=total(),co=d.cohost.on,ask=co&&Number(d.cohos
 /* ================= flows: Budget Requests has two steps, Liquidation keeps three ================= */
 const FLOW={
   req:{steps:[["details","Details"],["program","Program flow"],["items","Budget"],["review","Preview & print"]],show:{details:["details"],program:["program"],items:["items"],review:["review"],done:["review"]}},
-  liq:{steps:[["details","Request"],["items","Receipts"],["review","Preview & print"]],show:{tracker:["ltracker"],details:["ldetails"],items:["litems"],review:["review"],done:["review"]}}};
+  liq:{steps:[["details","Request"],["items","Receipts"],["proof","Proof"],["review","Preview & print"]],show:{tracker:["ltracker"],details:["ldetails"],items:["litems"],proof:["lproof"],review:["review"],done:["review"]}}};
 const SHORT={"Program flow":"Program","Preview & print":"Preview"};
 const STAGE=[
   {b:"Draft",t:"Draft",s:"Not sent yet. Only you can see it."},
@@ -283,13 +286,13 @@ const STAGE=[
 const stampFmt=d=>d?new Intl.DateTimeFormat("en-PH",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}).format(d):"";
 function stepOk(k){
   if(k==="review")return !!D().submitted;
-  if(AREA==="liq")return k==="details"?!!L.req:L.items.length>0&&L.items.every(lp);
+  if(AREA==="liq")return k==="details"?!!L.req:k==="proof"?proofOk():L.items.length>0&&L.items.every(lp);
   if(k==="details")return !!(S.d.name&&S.d.date&&S.d.purpose.trim());
   if(k==="program")return S.d.program.some(p=>p.seg.trim());
   return S.items.length>0&&S.items.every(priced);}
 function renderSteps(){const F=FLOW[AREA],stp=D().step,keys=F.steps.map(s=>s[0]),idx=stp==="done"?keys.length:keys.indexOf(stp),locked=stp==="done",br=true;
-  $("#railSteps").innerHTML=F.steps.map(([k,lb],i)=>{const ok=stepOk(k),cur=i===idx,st=ok?"done":cur?"cur":(i<idx&&k!=="program")?"inc":"todo";
-    const opt=k==="program"&&!ok;
+  $("#railSteps").innerHTML=F.steps.map(([k,lb],i)=>{const optK=k==="program"||(k==="proof"&&!proofNeeded()),ok=stepOk(k),cur=i===idx,st=ok?"done":cur?"cur":(i<idx&&!optK)?"inc":"todo";
+    const opt=optK&&!ok;
     const mk=br?(ok?'<span class="ok">Done</span>':cur?'<span class="now">In progress</span>':opt?'<span class="todo">Optional</span>':i<idx?'<span class="inc">Incomplete</span>':'<span class="todo">Not done</span>')
                :(cur?'<span class="cur" aria-hidden="true"></span>':ok?'<span class="ok">Done</span>':(i<idx&&i===0?'<span class="ok" style="color:var(--sun)">Incomplete</span>':""));
     const n=br&&ok?`<svg class="i" aria-hidden="true"><use href="#i-check"/></svg><span class="sr">${i+1}</span>`:(i+1);
@@ -345,6 +348,7 @@ function go(step,o={}){queueMicrotask(persist);
   if(secs.includes("details")){renderFunds();fit($("#fPurpose"));}
   if(secs.includes("program"))$$("#pfList textarea").forEach(fit);
   if(secs.includes("ldetails"))renderReqs();
+  if(secs.includes("lproof"))renderProof();
   $("#device").classList.toggle("trk",liq&&step==="tracker");
   if(secs.includes("ltracker"))renderTracker();
   renderMeta();renderDock();
@@ -532,9 +536,9 @@ const gAct=g=>g.rows.reduce((a,b)=>a+lTot(b),0), gPen=g=>g.rows.some(i=>!lp(i));
 /* the approved request's budget categories come in; receipts are added under them */
 function pickReq(id){if(L.req&&L.req.id!==id)LRS[L.req.id]=snapL();const r=REQS.find(x=>x.id===id);L.req=r;L.open=null;
   L.budget=r.items.map(([name,note,allot],i)=>({id:"b"+i,name,note,allot}));
-  const s=LRS[id];if(s){L.items=s.items;L.uid=s.uid;L.stage=s.stage;L.submitted=s.submitted;L.log=s.log||[];L.preparedBy=s.preparedBy||null;L.updated=s.updated||null;}else{L.updated=null;L.items=buildFromTrack(r);L.uid=L.items.length;L.stage=0;L.submitted=null;L.log=[];L.preparedBy=null;}
+  const s=LRS[id];if(s){L.items=s.items;L.uid=s.uid;L.stage=s.stage;L.submitted=s.submitted;L.log=s.log||[];L.preparedBy=s.preparedBy||null;L.updated=s.updated||null;L.proof=s.proof||blankProof();}else{L.updated=null;L.proof=blankProof();L.items=buildFromTrack(r);L.uid=L.items.length;L.stage=0;L.submitted=null;L.log=[];L.preparedBy=null;}
   L.d={name:r.name,date:r.date,venue:r.venue,fund:r.fund,allot:String(reqTot(r))};L.shown=lActual();}
-function clearReq(){L.req=null;L.budget=[];L.items=[];L.uid=0;L.open=null;L.submitted=null;L.d={name:"",date:"",venue:"",fund:"Org funds",allot:""};L.shown=0;}
+function clearReq(){L.proof=blankProof();L.req=null;L.budget=[];L.items=[];L.uid=0;L.open=null;L.submitted=null;L.d={name:"",date:"",venue:"",fund:"Org funds",allot:""};L.shown=0;}
 function fillCID(){}
 function guessG(name){const w=s=>(s.toLowerCase().match(/[a-z]{4,}/g)||[]);const nw=w(name);let best=null,sc=0;
   L.budget.forEach(b=>{const bw=w(b.name+" "+(b.note||""));const s=nw.filter(x=>bw.some(y=>y.startsWith(x.slice(0,4))||x.startsWith(y.slice(0,4)))).length;if(s>sc){sc=s;best=b.id;}});
@@ -552,7 +556,7 @@ const nextRef=()=>{const n=new Set(L.items.filter(i=>/^Receipt #\d+$/.test(i.ref
 /* ================= liquidation: the semester tracker (the Drive sheet, inside the Hub) =================
    One entry feeds both: receipts typed into a report are the tracker's rows. */
 const LRS={};
-const snapL=()=>({items:JSON.parse(JSON.stringify(L.items)),budget:L.budget,uid:L.uid,stage:L.stage,submitted:L.submitted,log:L.log||[],preparedBy:L.preparedBy||null,updated:L.updated||null});
+const snapL=()=>({items:JSON.parse(JSON.stringify(L.items)),budget:L.budget,uid:L.uid,stage:L.stage,submitted:L.submitted,log:L.log||[],preparedBy:L.preparedBy||null,updated:L.updated||null,proof:JSON.parse(JSON.stringify(L.proof||blankProof()))});
 function buildFromTrack(r){return (TRACK_RC[r.id]||[]).map((x,k)=>{const[gi,name,store,inv,ref,u,p]=x;return{id:k+1,g:"b"+gi,name,units:u,unit:"",price:p,store,inv,ref};});}
 function evData(id){const r=REQS.find(x=>x.id===id);
   if(L.req&&L.req.id===id)return{r,items:L.items,stage:L.stage};
@@ -730,8 +734,58 @@ function lpaperHTML(){const G=lGroups(),d=L.d,A=lAllot(),T=lActual(),df=A-T;
   const p2=page(`<h3 class="pt">Liquidation Report</h3>
     <table class="pt-table lq-t"><thead><tr>${th.map(t=>`<th>${t}</th>`).join("")}</tr></thead><tbody>${rows}
     ${L.req?`<tr class="pt-tot"><td colspan="7">TOTAL</td><td class="c">${pm(T)}</td><td class="c">${pm(A)}</td><td class="c">${exc2(df)}</td></tr>`:""}</tbody></table>`,"wide");
-  return p1+p2;}
+  return p1+p2+proofPagesHTML();}
 const exc2=v=>v<0?"("+pm(-v)+")":pm(v);
+
+/* ================= proof (optional): winner IDs and other photos, printed after the table ================= */
+const blankProof=()=>({ids:{},pages:[]});
+const prizeGroups=()=>L.budget.filter(b=>/prize/i.test(b.name)).map(b=>b.id);
+const places=()=>{const g=prizeGroups();return L.items.filter(i=>g.includes(i.g)).map(i=>i.name.trim()).filter(Boolean);};
+const proofNeeded=()=>places().length>0;
+function proofState(){const P=L.proof||(L.proof=blankProof()),pl=places();
+  const need=pl.reduce((n,p)=>n+(P.ids[p]?.front&&PHOTOS.has(P.ids[p].front)?0:1)+(P.ids[p]?.back&&PHOTOS.has(P.ids[p].back)?0:1),0);
+  return{P,pl,need,extra:P.pages.reduce((n,g)=>n+g.photos.length,0)};}
+function proofOk(){const{pl,need,extra}=proofState();return (pl.length>0||extra>0)&&need===0;}
+const ph=id=>id&&PHOTOS.get(id);
+function slotHTML(key,id,label){const u=ph(id);
+  return u?`<div class="ph-slot has"><img src="${u}" alt="${esc(label)}"><div class="ph-acts"><button class="textbtn" type="button" data-ph-add="${key}">Replace</button><button class="textbtn danger" type="button" data-ph-del="${key}">Remove</button></div></div>`
+    :`<button class="ph-slot" type="button" data-ph-add="${key}"><svg class="i" aria-hidden="true"><use href="#i-camera"/></svg><span>${esc(label)}</span></button>`;}
+function renderProof(){const{P,pl}=proofState();let h="";
+  if(pl.length){
+    h+=`<div class="sheet sheet-pad"><h2>Cash Prize Winner ID</h2><p class="lede">The front and back of each winner’s student ID. Take a photo or choose one from your gallery. Prints after the table.</p>
+      <div class="ph-places">${pl.map(p=>{const v=P.ids[p]||{};return `<div class="ph-place"><div class="ph-h">${esc(p)}</div><div class="ph-pair">${slotHTML("id|"+p+"|front",v.front,"Front of ID")}${slotHTML("id|"+p+"|back",v.back,"Back of ID")}</div></div>`;}).join("")}</div></div>`;}
+  h+=`<div class="sheet sheet-pad"><h2>Other proof <span class="opt">(optional)</span></h2><p class="lede">A page of photos for anything else the CSC asks for, like receipts or event documentation. Each page prints after the table.</p>
+    ${P.pages.map((g,i)=>`<div class="ph-page"><div class="field"><label for="phT${i}">Page title</label><input class="line-in" id="phT${i}" data-ph-title="${i}" autocomplete="off" placeholder="e.g. Official Receipts" value="${esc(g.title)}"></div>
+      <div class="ph-grid">${g.photos.map((id,k)=>slotHTML("pg|"+i+"|"+k,id,"Photo "+(k+1))).join("")}${slotHTML("pg|"+i+"|new",null,"Add a photo")}</div>
+      <button class="textbtn danger" type="button" data-ph-pgdel="${i}" style="justify-self:start;margin:0">Remove this page</button></div>`).join("")}
+    <button class="textbtn" type="button" id="phPgAdd" style="margin-top:var(--s4)">+ Add a page of photos</button></div>`;
+  $("#lproofBody").innerHTML=h;}
+let phTarget=null;
+$("#lproofBody").addEventListener("click",e=>{const P=L.proof,b=e.target.closest("[data-ph-add],[data-ph-del],[data-ph-pgdel],#phPgAdd");if(!b)return;
+  if(b.id==="phPgAdd"){P.pages.push({title:"",photos:[]});saved();renderProof();$(`#phT${P.pages.length-1}`).focus();return;}
+  if(b.dataset.phAdd){phTarget=b.dataset.phAdd;$("#proofFile").value="";$("#proofFile").click();return;}
+  if(b.dataset.phDel){const[k,a,c]=b.dataset.phDel.split("|");let was;
+    if(k==="id"){was=P.ids[a][c];P.ids[a][c]=null;}else{was=P.pages[+a].photos.splice(+c,1)[0];}
+    dropPhoto(was);saved();renderProof();renderSteps();renderDock();
+    toast("Photo removed",()=>{keepPhoto(was);if(k==="id")P.ids[a][c]=was;else P.pages[+a].photos.splice(+c,0,was);saved();renderProof();renderSteps();renderDock();});return;}
+  if(b.dataset.phPgdel){const i=+b.dataset.phPgdel,was=P.pages.splice(i,1)[0];saved();renderProof();renderSteps();
+    toast(`Removed “${was.title||"page of photos"}”`,()=>{P.pages.splice(i,0,was);saved();renderProof();renderSteps();});}});
+$("#lproofBody").addEventListener("input",e=>{const t=e.target.closest("[data-ph-title]");if(!t)return;L.proof.pages[+t.dataset.phTitle].title=t.value;saved();});
+$("#proofFile").addEventListener("change",async e=>{const f=e.target.files&&e.target.files[0];if(!f||!phTarget)return;const[k,a,c]=phTarget.split("|"),P=L.proof;
+  let id;try{id=await addPhoto(f);}catch(err){toast("That photo couldn’t be read. Try another one");return;}
+  if(k==="id"){P.ids[a]=P.ids[a]||{};if(P.ids[a][c])dropPhoto(P.ids[a][c]);P.ids[a][c]=id;}
+  else{const g=P.pages[+a];if(c==="new")g.photos.push(id);else{dropPhoto(g.photos[+c]);g.photos[+c]=id;}}
+  saved();renderProof();renderSteps();renderDock();toast("Photo added. It stays on this device");});
+function proofPagesHTML(){if(!L.req)return"";const{P,pl}=proofState();let out="";
+  const cell=(id,what)=>{const u=ph(id);return u?`<td class="c ph-cell"><img src="${u}" alt=""></td>`:`<td class="c ph-cell"><span class="p-need">${esc(what)}</span></td>`;};
+  if(pl.length)out+=page(`<table class="pt-table ph-t"><thead><tr><th colspan="${pl.length}">Cash Prize Winner ID</th></tr><tr>${pl.map(p=>`<th>${esc(p.toUpperCase())}</th>`).join("")}</tr></thead>
+    <tbody><tr>${pl.map(p=>cell(P.ids[p]?.front,p+" ID, front")).join("")}</tr><tr>${pl.map(p=>cell(P.ids[p]?.back,p+" ID, back")).join("")}</tr></tbody></table>`);
+  P.pages.filter(g=>g.photos.some(id=>PHOTOS.has(id))).forEach(g=>{
+    out+=page(`<table class="pt-table ph-t"><thead><tr><th colspan="2">${esc(g.title||"Proof")}</th></tr></thead><tbody>${
+      g.photos.filter(id=>PHOTOS.has(id)).reduce((rows,id,i,arr)=>i%2?rows:rows+`<tr>${cell(id,"")}${arr[i+1]?cell(arr[i+1],""):'<td class="ph-cell"></td>'}</tr>`,"")}</tbody></table>`);});
+  return out;}
+// photos load from the device after start; redraw what shows them
+loadPhotos().then(()=>{if(AREA==="liq"&&(L.step==="proof"||L.step==="review"||L.step==="done"))go(L.step,{instant:true,noFocus:true,force:true});});
 
 /* start over (liquidation): clears the picked request and every receipt, only after confirmation */
 $("#lresetBtn").addEventListener("click",()=>{const n=L.items.length;
