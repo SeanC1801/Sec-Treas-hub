@@ -23,18 +23,24 @@ Screenshots of the hub will be added here once the design is final.
 
 ## Try it
 
-Open `index.html` in a browser. No install or build needed.
+```
+npm install
+npm run dev
+```
+
+The frozen design prototype is `prototypes/archive/anchor-treasurer-v8.html` (opens directly in a browser).
 
 ## Deploy
 
-On Vercel: **Add New → Project**, import this repo, choose the **Other** preset, leave the build settings empty, and deploy. Every push to `main` redeploys.
+On Vercel: **Add New → Project**, import this repo; the **Vite** preset is picked up from `vercel.json`. Every push to `main` redeploys.
 
 ## What's in the repo
 
 ```
-index.html          the current prototype
+index.html          app markup (Vite entry)
+src/                app styles and scripts
+public/assets/      letterhead and background images
 vercel.json         hosting settings
-assets/             letterhead and background images
 docs/design/        design brief, UX map and research
 prototypes/archive/ earlier versions
 ```

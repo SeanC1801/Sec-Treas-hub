@@ -1,0 +1,7 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "app", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--port", "5173", "--strictPort"], "port": 5173 },
+    { "name": "prototype", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "preview", "--port", "5174", "--strictPort", "--outDir", "prototypes/archive"], "port": 5174 }
+  ]
+}
