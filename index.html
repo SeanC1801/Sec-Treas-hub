@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,500;0,600;0,700;1,500&family=IBM+Plex+Serif:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/src/styles.css">
+<link rel="stylesheet" href="/src/hub.css">
 </head>
 <body>
 
@@ -40,11 +41,34 @@
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></symbol>
   <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3L4.5 9"/><path d="M4.5 4.5V9H9"/></symbol>
   <symbol id="i-zoom" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5M11 8.5v5M8.5 11h5"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-6.5 8 6.5"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/></symbol>
+  <symbol id="i-tools" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></symbol>
+  <symbol id="i-lib" viewBox="0 0 24 24"><path d="M8 3.5h7l4 4v13H8z"/><path d="M15 3.5v4h4"/><path d="M5 7v13.5h10"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.2-3.7 4-5.5 7.5-5.5s6.3 1.8 7.5 5.5"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></symbol>
 </svg>
 
 <div class="stage">
 <div class="device br" id="device">
   <div class="sky" aria-hidden="true"></div><div class="grain" aria-hidden="true"></div>
+  <!-- the hub: Sign in, Home, Tools, Library, Profile (workflows open over it in focus mode) -->
+  <div class="signin" id="signin"></div>
+  <div class="hub" id="hub">
+    <header class="hubhead glass" id="hubhead">
+      <a class="hd-mark" href="#" data-tab="home" aria-label="sectreas hub, home">sectreas hub</a>
+      <div class="hh-t" id="hubTitle">Home</div>
+      <nav class="areas hh-nav" aria-label="Hub" id="hubNav"></nav>
+      <span class="grow"></span>
+      <div class="areas hh-role" role="radiogroup" aria-label="Show tools for" id="roleSwitch"></div>
+    </header>
+    <div class="hub-layout">
+      <aside class="rail hub-rail" id="hubRail"></aside>
+      <main class="hub-main" id="hubMain"></main>
+    </div>
+  </div>
+  <nav class="tabbar glass" id="tabbar" aria-label="Hub"></nav>
+  <div class="apscrim" id="apScrim" hidden></div>
+  <div class="apsheet" id="apSheet" role="dialog" aria-modal="true" aria-labelledby="apT" hidden></div>
   <header class="apphead glass" id="apphead"><a class="hd-mark" href="#" aria-label="sectreas hub, home">sectreas hub</a><nav class="areas" aria-label="Treasurer area"><button type="button" data-area="req" aria-current="page">Budget Requests</button><button type="button" data-area="liq">Liquidation</button></nav><span class="grow"></span><span class="badge" id="hdBadge" data-stage="0" role="status">Draft</span></header>
 
   <div class="app" id="app">

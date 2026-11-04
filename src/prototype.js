@@ -1,3 +1,4 @@
+import { me } from "./session.js";
 
 /* ================= data ================= */
 /* v6: a budget request is a list of category lines (category · notes · amount), as the CSC template prints it */
@@ -439,12 +440,12 @@ document.addEventListener("click",e=>{
   const ar=e.target.closest("[data-area]");if(ar){setArea(ar.dataset.area);return;}
   const gb=e.target.closest("[data-go]");if(gb){reviewGo(gb.dataset.go);return;}
   const to=e.target.closest("[data-to]");if(to&&!to.disabled){go(to.dataset.to,{force:to.classList.contains("stepbtn")||to.classList.contains("rstep")});return;}
-  if(e.target.closest("[data-close-flow]")){if(AREA==="liq"&&L.step!=="tracker"){go("tracker");toast("Back to the tracker. Your report is saved.");}else toast(AREA==="liq"?"This is the Liquidation home.":"Closes to Budget requests. Your draft is saved.");return;}
+  if(e.target.closest("[data-close-flow]")){if(AREA==="liq"&&L.step!=="tracker"){go("tracker");toast("Back to the tracker. Your report is saved.");}else dispatchEvent(new CustomEvent("hub:close"));return;}
   if(e.target.closest("#moreBtn")){togglePop(e.target.closest("#moreBtn"));return;}
   const a=e.target.closest("[data-act]");if(a){closePop();act(a.dataset.act);return;}
   if(e.target.closest("#submitBtn")){submit();return;}
-  if(e.target.closest("#unsend")){D().submitted=null;D().stage=0;go("review",{force:true});toast("Unsent. It’s back to draft");return;}
-  if(e.target.closest("#homeBtn")){toast("Home is designed next");return;}
+  if(e.target.closest("#unsend")){D().submitted=null;D().stage=0;logStage(D(),0,"Unsent");go("review",{force:true});toast("Unsent. It’s back to draft");return;}
+  if(e.target.closest("#homeBtn")){dispatchEvent(new CustomEvent("hub:close"));return;}
   if(!e.target.closest("#morePop"))closePop();});
 function act(k){
   if(k==="copy"){const link=location.href.split("?")[0].split("#")[0]+"#"+(AREA==="liq"?"liquidation-":"request-")+slug(D().d.name);
@@ -461,7 +462,7 @@ function doPrint(){const liq=AREA==="liq";
 function submit(){const liq=AREA==="liq";if(liq&&!L.req){go("review");return;}
   const need=liq?L.items.filter(i=>!lp(i)):S.items.filter(i=>!priced(i));
   if(need.length){$("#needBanner").hidden=false;toast(liq?"Add the missing price first":"Add the missing amount first");$("#needFix").focus();return;}
-  const now=new Date();D().submitted=now;D().stage=1;
+  const now=new Date();D().submitted=now;D().stage=1;logStage(D(),1);
   setStamp(now);
   go("done",{noFocus:true});setTimeout(()=>$("#homeBtn")&&$("#homeBtn").focus(),60);}
 $("#needFix").addEventListener("click",()=>{
@@ -528,7 +529,7 @@ const gAct=g=>g.rows.reduce((a,b)=>a+lTot(b),0), gPen=g=>g.rows.some(i=>!lp(i));
 /* the approved request's budget categories come in; receipts are added under them */
 function pickReq(id){if(L.req&&L.req.id!==id)LRS[L.req.id]=snapL();const r=REQS.find(x=>x.id===id);L.req=r;L.open=null;
   L.budget=r.items.map(([name,note,allot],i)=>({id:"b"+i,name,note,allot}));
-  const s=LRS[id];if(s){L.items=s.items;L.uid=s.uid;L.stage=s.stage;L.submitted=s.submitted;}else{L.items=buildFromTrack(r);L.uid=L.items.length;L.stage=0;L.submitted=null;}
+  const s=LRS[id];if(s){L.items=s.items;L.uid=s.uid;L.stage=s.stage;L.submitted=s.submitted;L.log=s.log||[];}else{L.items=buildFromTrack(r);L.uid=L.items.length;L.stage=0;L.submitted=null;L.log=[];}
   L.d={name:r.name,date:r.date,venue:r.venue,fund:r.fund,allot:String(reqTot(r))};L.shown=lActual();}
 function clearReq(){L.req=null;L.budget=[];L.items=[];L.uid=0;L.open=null;L.submitted=null;L.d={name:"",date:"",venue:"",fund:"Org funds",allot:""};L.shown=0;}
 function fillCID(){}
@@ -548,7 +549,7 @@ const nextRef=()=>{const n=new Set(L.items.filter(i=>/^Receipt #\d+$/.test(i.ref
 /* ================= liquidation: the semester tracker (the Drive sheet, inside the Hub) =================
    One entry feeds both: receipts typed into a report are the tracker's rows. */
 const LRS={};
-const snapL=()=>({items:JSON.parse(JSON.stringify(L.items)),budget:L.budget,uid:L.uid,stage:L.stage,submitted:L.submitted});
+const snapL=()=>({items:JSON.parse(JSON.stringify(L.items)),budget:L.budget,uid:L.uid,stage:L.stage,submitted:L.submitted,log:L.log||[]});
 function buildFromTrack(r){return (TRACK_RC[r.id]||[]).map((x,k)=>{const[gi,name,store,inv,ref,u,p]=x;return{id:k+1,g:"b"+gi,name,units:u,unit:"",price:p,store,inv,ref};});}
 function evData(id){const r=REQS.find(x=>x.id===id);
   if(L.req&&L.req.id===id)return{r,items:L.items,stage:L.stage};
@@ -747,13 +748,16 @@ function setArea(a,o={}){if(a===AREA&&!o.force)return;AREA=a;
   closePop();closeZoom(true);$("#resetConfirm").hidden=true;$("#lresetConfirm").hidden=true;
   go(D().step,{instant:true,noFocus:true,force:true});}
 
+/* status log: who moved a document and when */
+function logStage(doc,to,note){const u=me();(doc.log||(doc.log=[])).push({to,at:Date.now(),by:u.name,role:u.role,note:note||""});}
+
 /* ================= saving on this device (front-end draft; the server comes later) ================= */
 const SAVE_KEY="sectreas:treasurer:v1";let BOOTED=false;
 function setStamp(d){$("#stampDate").textContent=new Intl.DateTimeFormat("en-PH",{month:"short",day:"numeric",year:"numeric"}).format(d).toUpperCase().replace(",","")+" · "+new Intl.DateTimeFormat("en-PH",{hour:"numeric",minute:"2-digit"}).format(d).toUpperCase();}
 function persist(){if(!BOOTED)return;
   const lrs={...LRS};if(L.req)lrs[L.req.id]=snapL();
   const data={v:1,at:Date.now(),area:AREA,
-    S:{items:S.items,uid:S.uid,step:S.step,stage:S.stage,submitted:S.submitted,d:S.d},
+    S:{items:S.items,uid:S.uid,step:S.step,stage:S.stage,submitted:S.submitted,d:S.d,log:S.log||[]},
     L:{step:L.step,req:L.req&&L.req.id},LRS:lrs};
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(data));}catch(e){}}
 function loadSaved(){try{const d=JSON.parse(localStorage.getItem(SAVE_KEY)||"null");return d&&d.v===1?d:null;}catch(e){return null;}}
@@ -772,7 +776,7 @@ addEventListener("offline",()=>{S.offline=true;setSave("offline");toast("You’r
 addEventListener("online",()=>{S.offline=false;saved();});
 
 /* ================= sample data (first run only; ?state= and ?reset in the URL for testing) ================= */
-function setState(m){S.mode=m;S.uid=0;S.open=null;S.offline=m==="offline";S.submitted=null;S.stage=0;
+function setState(m){S.mode=m;S.log=[];S.uid=0;S.open=null;S.offline=m==="offline";S.submitted=null;S.stage=0;
   if(m==="empty"){S.items=[];S.d=blankD();}
   else{S.items=SAMPLE.map(s=>({id:++S.uid,...s}));
     S.d={...blankD(),name:"ACM-AUF Hackathon 2026",date:"2026-11-21",venue:"Computer Laboratory",participants:"AUF CCS Students",allot:m==="over"?"10000":"15000",
@@ -810,3 +814,7 @@ const st=qs.get("step")||(a0==="liq"?"tracker":"details");
 if(st==="done"||st==="approved")reviewGo(st);else go(st,{instant:true,noFocus:true,force:true});}
 BOOTED=true;persist();
 if(qs.get("type")){(AREA==="liq"?$("#lqa"):$("#qa")).value=qs.get("type");(AREA==="liq"?renderReadsL:renderReads)();}
+
+/* the hub shell (src/hub.js) drives the flows through this */
+export const TR={S,L,LRS,REQS,ORG,STAGE,evData,evAllot,reqTot,lTot,total,go,setArea,pickReq,openEvent,snapL,saved,toast,logStage,setStamp,
+  area:()=>AREA,doc:()=>D(),stampFmt};
