@@ -52,8 +52,8 @@ function load() {
   return { v: 1, roster: ROSTER0.slice(), list: [SAMPLE()], cur: null, step: "list" };
 }
 let saveT;
-function save() {
-  const m = cur(); if (m) m.updated = Date.now();
+function save(touch = true) {
+  const m = cur(); if (m && touch) m.updated = Date.now();
   try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch {}
   const b = $("#secSave"); if (b) { b.classList.add("saving"); b.querySelector(".t").textContent = "Saving…"; clearTimeout(saveT); saveT = setTimeout(() => { b.classList.remove("saving"); b.querySelector(".t").textContent = "Saved"; }, 600); }
 }
@@ -131,14 +131,14 @@ const root = $("#sec");
 let openRow = null; // "g:r" of the action row being edited
 
 export function openMinutes(id) {
-  DB.cur = id || null; DB.step = id ? ((DB.list.find((x) => x.id === id) || {}).final ? "review" : "details") : "list"; save();
+  DB.back = id ? "hub" : null; DB.cur = id || null; DB.step = id ? ((DB.list.find((x) => x.id === id) || {}).final ? "review" : "details") : "list"; save(false);
   render(); root.scrollTop = 0;
 }
 export function newMinutes() {
   const m = blank(); DB.list.unshift(m); DB.cur = m.id; DB.step = "details"; save();
   render(); root.scrollTop = 0;
 }
-function go(step) { DB.step = step; openRow = null; save(); render(); root.scrollTop = 0; $("#secMain h2")?.focus({ preventScroll: true }); }
+function go(step) { DB.step = step; openRow = null; save(false); render(); root.scrollTop = 0; $("#secMain h2")?.focus({ preventScroll: true }); }
 
 function render() {
   const m = cur(), list = DB.step === "list" || !m;
@@ -241,13 +241,13 @@ root.addEventListener("input", (e) => {
 root.addEventListener("click", (e) => {
   const m = cur(), c = (s) => e.target.closest(s);
   if (c("[data-sclose]")) {
-    if (DB.step !== "list") { DB.step = "list"; DB.cur = null; save(); render(); TR.toast("Saved. Back to your meetings"); }
-    else dispatchEvent(new CustomEvent("hub:home"));
+    if (DB.step !== "list" && !DB.back) { DB.step = "list"; DB.cur = null; save(false); render(); TR.toast("Saved. Back to your meetings"); }
+    else { DB.back = null; DB.step = "list"; DB.cur = null; save(false); dispatchEvent(new CustomEvent("hub:home")); }
     return;
   }
   const sg = c("[data-sgo]"); if (sg) { go(sg.dataset.sgo); return; }
-  const mo = c("[data-mopen]"); if (mo) { DB.cur = mo.dataset.mopen; go(DB.list.find((x) => x.id === DB.cur).final ? "review" : "details"); return; }
-  if (c("#mNew")) { newMinutes(); return; }
+  const mo = c("[data-mopen]"); if (mo) { DB.back = null; DB.cur = mo.dataset.mopen; go(DB.list.find((x) => x.id === DB.cur).final ? "review" : "details"); return; }
+  if (c("#mNew")) { DB.back = null; newMinutes(); return; }
   if (!m) return;
   const pr = c("[data-pres]");
   if (pr) { const n = pr.dataset.pres, i = m.present.indexOf(n); i < 0 ? m.present.push(n) : m.present.splice(i, 1); pr.setAttribute("aria-checked", i < 0); save(); $(".sheet h2 .opt", root.querySelectorAll(".sheet")[1]).textContent = `(${m.present.length} present)`; return; }

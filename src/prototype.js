@@ -104,7 +104,7 @@ function parse(text){
 let saveT;
 function setSave(kind){$$("[data-save]").forEach(s=>{s.classList.remove("saving","offline");const t=s.querySelector(".t"),sr=s.querySelector("[data-save-sr]");
   const txt=kind==="saving"?"Saving…":kind==="offline"?"Saved on this device":"Saved";if(kind!=="saved")s.classList.add(kind);t.textContent=txt;if(sr)sr.textContent=txt;});}
-function saved(){stampPreparer();persist();if(S.offline){setSave("offline");return;}setSave("saving");clearTimeout(saveT);saveT=setTimeout(()=>setSave("saved"),650);}
+function saved(){stampPreparer();if(BOOTED){const d=D();if(d&&(AREA==="req"||L.req))d.updated=Date.now();}persist();if(S.offline){setSave("offline");return;}setSave("saving");clearTimeout(saveT);saveT=setTimeout(()=>setSave("saved"),650);}
 
 /* ================= budget lines: quick add [Bea] =================
    "Food 450 light refreshments for guests" · "Prizes 500 para sa minigames" · "450 snacks for the guests" · "Cash prizes ₱1,000" */
@@ -443,7 +443,7 @@ document.addEventListener("click",e=>{
   const ar=e.target.closest("[data-area]");if(ar){setArea(ar.dataset.area);return;}
   const gb=e.target.closest("[data-go]");if(gb){reviewGo(gb.dataset.go);return;}
   const to=e.target.closest("[data-to]");if(to&&!to.disabled){go(to.dataset.to,{force:to.classList.contains("stepbtn")||to.classList.contains("rstep")});return;}
-  if(e.target.closest("[data-close-flow]")){if(AREA==="liq"&&L.step!=="tracker"){go("tracker");toast("Back to the tracker. Your report is saved.");}else dispatchEvent(new CustomEvent("hub:close"));return;}
+  if(e.target.closest("[data-close-flow]")){if(AREA==="liq"&&L.step!=="tracker"&&!BACK.hub){go("tracker");toast("Back to the tracker. Your report is saved.");}else{BACK.hub=false;dispatchEvent(new CustomEvent("hub:close"));}return;}
   if(e.target.closest("#moreBtn")){togglePop(e.target.closest("#moreBtn"));return;}
   const a=e.target.closest("[data-act]");if(a){closePop();act(a.dataset.act);return;}
   if(e.target.closest("#submitBtn")){submit();return;}
@@ -532,7 +532,7 @@ const gAct=g=>g.rows.reduce((a,b)=>a+lTot(b),0), gPen=g=>g.rows.some(i=>!lp(i));
 /* the approved request's budget categories come in; receipts are added under them */
 function pickReq(id){if(L.req&&L.req.id!==id)LRS[L.req.id]=snapL();const r=REQS.find(x=>x.id===id);L.req=r;L.open=null;
   L.budget=r.items.map(([name,note,allot],i)=>({id:"b"+i,name,note,allot}));
-  const s=LRS[id];if(s){L.items=s.items;L.uid=s.uid;L.stage=s.stage;L.submitted=s.submitted;L.log=s.log||[];L.preparedBy=s.preparedBy||null;}else{L.items=buildFromTrack(r);L.uid=L.items.length;L.stage=0;L.submitted=null;L.log=[];L.preparedBy=null;}
+  const s=LRS[id];if(s){L.items=s.items;L.uid=s.uid;L.stage=s.stage;L.submitted=s.submitted;L.log=s.log||[];L.preparedBy=s.preparedBy||null;L.updated=s.updated||null;}else{L.updated=null;L.items=buildFromTrack(r);L.uid=L.items.length;L.stage=0;L.submitted=null;L.log=[];L.preparedBy=null;}
   L.d={name:r.name,date:r.date,venue:r.venue,fund:r.fund,allot:String(reqTot(r))};L.shown=lActual();}
 function clearReq(){L.req=null;L.budget=[];L.items=[];L.uid=0;L.open=null;L.submitted=null;L.d={name:"",date:"",venue:"",fund:"Org funds",allot:""};L.shown=0;}
 function fillCID(){}
@@ -552,7 +552,7 @@ const nextRef=()=>{const n=new Set(L.items.filter(i=>/^Receipt #\d+$/.test(i.ref
 /* ================= liquidation: the semester tracker (the Drive sheet, inside the Hub) =================
    One entry feeds both: receipts typed into a report are the tracker's rows. */
 const LRS={};
-const snapL=()=>({items:JSON.parse(JSON.stringify(L.items)),budget:L.budget,uid:L.uid,stage:L.stage,submitted:L.submitted,log:L.log||[],preparedBy:L.preparedBy||null});
+const snapL=()=>({items:JSON.parse(JSON.stringify(L.items)),budget:L.budget,uid:L.uid,stage:L.stage,submitted:L.submitted,log:L.log||[],preparedBy:L.preparedBy||null,updated:L.updated||null});
 function buildFromTrack(r){return (TRACK_RC[r.id]||[]).map((x,k)=>{const[gi,name,store,inv,ref,u,p]=x;return{id:k+1,g:"b"+gi,name,units:u,unit:"",price:p,store,inv,ref};});}
 function evData(id){const r=REQS.find(x=>x.id===id);
   if(L.req&&L.req.id===id)return{r,items:L.items,stage:L.stage};
@@ -751,12 +751,15 @@ function setArea(a,o={}){if(a===AREA&&!o.force)return;AREA=a;
   closePop();closeZoom(true);$("#resetConfirm").hidden=true;$("#lresetConfirm").hidden=true;
   go(D().step,{instant:true,noFocus:true,force:true});}
 
+/* where × goes: a report opened from the hub closes back to the hub, not the tracker */
+const BACK={hub:false};
+
 /* who prepared it: the first Treasurer who works on a document signs it */
 function stampPreparer(){const d=D(),u=me();if(d&&!d.preparedBy&&u.role==="treasurer"&&(AREA==="req"||L.req))d.preparedBy=u.name;}
 const prep=d=>(d&&d.preparedBy)||ORG.treasurer;
 
 /* status log: who moved a document and when */
-function logStage(doc,to,note){const u=me();(doc.log||(doc.log=[])).push({to,at:Date.now(),by:u.name,role:u.role,note:note||""});}
+function logStage(doc,to,note){const u=me();doc.updated=Date.now();(doc.log||(doc.log=[])).push({to,at:Date.now(),by:u.name,role:u.role,note:note||""});}
 
 /* ================= saving on this device (front-end draft; the server comes later) ================= */
 const SAVE_KEY="sectreas:treasurer:v1";let BOOTED=false;
@@ -764,7 +767,7 @@ function setStamp(d){$("#stampDate").textContent=new Intl.DateTimeFormat("en-PH"
 function persist(){if(!BOOTED)return;
   const lrs={...LRS};if(L.req)lrs[L.req.id]=snapL();
   const data={v:1,at:Date.now(),area:AREA,
-    S:{items:S.items,uid:S.uid,step:S.step,stage:S.stage,submitted:S.submitted,d:S.d,log:S.log||[],preparedBy:S.preparedBy||null},
+    S:{items:S.items,uid:S.uid,step:S.step,stage:S.stage,submitted:S.submitted,d:S.d,log:S.log||[],preparedBy:S.preparedBy||null,updated:S.updated||null},
     L:{step:L.step,req:L.req&&L.req.id},LRS:lrs};
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(data));}catch(e){}}
 function loadSaved(){try{const d=JSON.parse(localStorage.getItem(SAVE_KEY)||"null");return d&&d.v===1?d:null;}catch(e){return null;}}
@@ -823,5 +826,5 @@ BOOTED=true;persist();
 if(qs.get("type")){(AREA==="liq"?$("#lqa"):$("#qa")).value=qs.get("type");(AREA==="liq"?renderReadsL:renderReads)();}
 
 /* the hub shell (src/hub.js) drives the flows through this */
-export const TR={prep,S,L,LRS,REQS,ORG,STAGE,evData,evAllot,reqTot,lTot,total,go,setArea,pickReq,openEvent,snapL,saved,toast,logStage,setStamp,
+export const TR={BACK,prep,S,L,LRS,REQS,ORG,STAGE,evData,evAllot,reqTot,lTot,total,go,setArea,pickReq,openEvent,snapL,saved,toast,logStage,setStamp,
   area:()=>AREA,doc:()=>D(),stampFmt};

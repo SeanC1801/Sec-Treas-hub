@@ -44,6 +44,7 @@ function saveOrg() {
 // stage: 0 Draft · 1 With President · 2 With Adviser · 3 With CSC · 4 Approved
 const NEXT = { 1: "president", 2: "adviser", 3: "treasurer" }; // who moves it forward (CSC stages recorded by the Treasurer)
 const lastLog = (st) => (st.log && st.log.length ? st.log[st.log.length - 1] : null);
+const lastAt = (st) => (st && st.log && st.log.length ? st.log[st.log.length - 1].at : 0);
 const isReturned = (st) => st.stage === 0 && /^Returned/.test(lastLog(st)?.note || "");
 
 function lrState(id) {
@@ -56,28 +57,29 @@ function docs() {
   out.push({
     key: "br:cur", kind: "br", title: S.d.name || "Untitled budget request", type: "Budget request",
     meta: [S.d.date ? dShort(S.d.date) : "No date yet", S.items.length ? peso(TR.total()) : "No lines yet"].join(" · "),
-    st: () => S, open: () => openFlow("req"),
+    at: S.updated || lastAt(S) || Date.now(), st: () => S, open: () => openFlow("req"),
   });
   for (const r of REQS.filter((x) => x.ok)) {
     const e = TR.evData(r.id), A = TR.evAllot(r), T = e.items.reduce((a, b) => a + TR.lTot(b), 0);
     out.push({
       key: "lr:" + r.id, kind: "lr", id: r.id, title: r.short || r.name, type: "Liquidation report",
       meta: e.items.length ? `${peso(T)} of ${peso(A)}` : `Not started · ${peso(A)} allotted`,
-      st: () => lrState(r.id), open: () => openFlow("liq", r.id),
+      at: (LRS[r.id] || (L.req && L.req.id === r.id ? L : {})).updated || lastAt(lrState(r.id)) || Date.parse((r.date || "2026-10-15") + "T12:00"),
+      st: () => lrState(r.id), open: () => { TR.BACK.hub = true; openFlow("liq", r.id); },
     });
   }
   for (const r of REQS.filter((x) => x.ok)) {
     out.push({
       key: "bp:" + r.id, kind: "bp", id: r.id, title: r.short || r.name, type: "Budget request", past: true,
       meta: `Approved${r.approved ? " " + r.approved : ""} · ${peso(TR.reqTot(r))}`,
-      st: () => ({ stage: 4, log: [], submitted: null }), open: () => openPath(doc("bp:" + r.id)),
+      at: Date.parse("2026-09-18T12:00"), st: () => ({ stage: 4, log: [], submitted: null }), open: () => openPath(doc("bp:" + r.id)),
     });
   }
   for (const m of minutesList()) {
     out.push({
       key: "mn:" + m.id, kind: "mn", id: m.id, title: `Meeting, ${m.date ? dShort(m.date) : "no date"}`, type: "Minutes",
       meta: `${m.location || "No location"} · ${m.present.length} present`, label: m.final ? "Final" : "Draft",
-      st: () => ({ stage: m.final ? 4 : 0, log: [] }), open: () => { setView("sec"); openMinutes(m.id); },
+      at: m.updated || Date.parse(m.date + "T12:00"), st: () => ({ stage: m.final ? 4 : 0, log: [] }), open: () => { setView("sec"); openMinutes(m.id); },
     });
   }
   for (const c of certList()) {
@@ -85,7 +87,7 @@ function docs() {
     out.push({
       key: "ct:" + c.id, kind: "ct", id: c.id, title: c.event || "Untitled event", type: "Certificates",
       meta: `${CERT_TYPES[c.type].label} · ${n} ${n === 1 ? "name" : "names"}`, label: n ? "Ready" : "No names",
-      st: () => ({ stage: n ? 4 : 0, log: [] }), open: () => { setView("cert"); openCerts(c.id); },
+      at: c.updated || Date.parse(c.date + "T12:00"), st: () => ({ stage: n ? 4 : 0, log: [] }), open: () => { setView("cert"); openCerts(c.id); },
     });
   }
   return out;
@@ -117,16 +119,19 @@ function openFlow(area, lrId) {
 addEventListener("hub:close", () => { setView("hub"); TR.toast("Saved. You’re back at the hub"); });
 $("#apphead .hd-mark")?.addEventListener("click", (e) => { e.preventDefault(); setView("hub"); });
 
-/* ---------------- hub chrome ---------------- */
-const TABS = [["home", "Home", "i-home"], ["tools", "Tools", "i-tools"], ["library", "Library", "i-lib"], ["profile", "Profile", "i-user"]];
+/* ---------------- hub chrome: Home · Library · Profile ---------------- */
+const TABS = [["home", "Home", "i-home"], ["library", "Library", "i-lib"], ["profile", "Profile", "i-user"]];
+const signerRole = () => me().role === "president" || me().role === "adviser";
 function renderChrome() {
+  if (!TABS.some((t) => t[0] === ui.tab)) ui.tab = "home";
   const cur = (k) => (k === ui.tab ? ' aria-current="page"' : "");
   $("#hubNav").innerHTML = TABS.map(([k, l]) => `<button type="button" data-tab="${k}"${cur(k)}>${l}</button>`).join("");
   $("#tabbar").innerHTML = TABS.map(([k, l, i]) => `<button type="button" data-tab="${k}"${cur(k)}><svg class="i" aria-hidden="true"><use href="#${i}"/></svg>${l}</button>`).join("");
   $("#hubTitle").textContent = TABS.find((t) => t[0] === ui.tab)[1];
   const lens = (k, l) => `<button type="button" role="radio" data-lens="${k}" aria-checked="${ui.lens === k}"${ui.lens === k ? ' aria-current="page"' : ""}>${l}</button>`;
   $("#roleSwitch").innerHTML = lens("treasurer", "Treasurer") + lens("secretary", "Secretary");
-  $("#roleSwitch").hidden = ui.tab === "profile";
+  // the switch only changes Home's tools, so it shows on Home, for the officers who have tools
+  $("#roleSwitch").hidden = ui.tab !== "home" || signerRole();
 }
 document.addEventListener("click", (e) => {
   const t = e.target.closest("[data-tab]");
@@ -142,7 +147,7 @@ function titleBlock(kicker, h1, extra = "") {
 }
 function renderHub() {
   renderChrome();
-  const T = { home: renderHome, tools: renderTools, library: renderLibrary, profile: renderProfile }[ui.tab] || renderHome;
+  const T = { home: renderHome, library: renderLibrary, profile: renderProfile }[ui.tab] || renderHome;
   $("#hubMain").innerHTML = T();
 }
 
@@ -161,69 +166,63 @@ document.addEventListener("click", (e) => {
   if (tl) { openTool(tl.dataset.tool); }
 });
 
-/* ---- Home ---- */
+/* ---- Home: your tools, then what's waiting on you ---- */
 const hello = () => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; };
 const firstName = (n) => (ORG.nick && ORG.nick[n]) || String(n).replace(/^(Ms\.|Mr\.|Mrs\.|Dr\.)\s*/i, "").split(" ")[0];
-function renderHome() {
-  const u = me(), all = docs();
-  const mine = all.filter(needsMe);
-  const drafts = all.filter((d) => !d.past && stageOf(d) === 0 && !isReturned(d.st()) && (d.kind !== "br" || S.d.name || S.items.length));
-  const signer = u.role === "president" || u.role === "adviser";
-  const top = ui.lens === "secretary" ? ["minutes", "Minutes"] : ["br", "Budget Requests"];
-  const key = signer ? `<button class="key" type="button" data-tab="library">Library<svg class="i"><use href="#i-arrow"/></svg></button>`
-    : `<button class="key" type="button" data-tool="${top[0]}">${top[1]}<svg class="i"><use href="#i-arrow"/></svg></button>`;
-  const head = titleBlock(`${ROLES[u.role]} · A.Y. 2026–27`, `${hello()}, ${firstName(u.name)}`, key);
-  const needs = `<section class="sheet"><div class="sheet-h"><h2>Needs your action</h2><p class="lede">${mine.length ? "Your turn on these." : "Nothing is waiting on you."}</p></div>
-    ${mine.length ? `<ul class="rows">${mine.map(docRow).join("")}</ul>` : ""}</section>`;
-  let cont;
-  if (signer) {
-    const moving = all.filter((d) => !d.past && stageOf(d) >= 1 && stageOf(d) <= 3 && !needsMe(d));
-    cont = `<section class="sheet"><div class="sheet-h"><h2>On its way</h2><p class="lede">Submitted documents that are with someone else.</p></div>
-      ${moving.length ? `<ul class="rows">${moving.map(docRow).join("")}</ul>` : `<p class="empty">Nothing else is moving right now.</p>`}</section>`;
-  } else if (ui.lens === "secretary") {
-    const md = all.filter((d) => d.kind === "mn" || d.kind === "ct").sort((a, b) => b.key.localeCompare(a.key)).slice(0, 4);
-    cont = `<section class="sheet"><div class="sheet-h"><h2>Recent minutes and certificates</h2><p class="lede">Drafts save on this device as you type.</p></div>
-      ${md.length ? `<ul class="rows">${md.map(docRow).join("")}</ul>` : `<p class="empty">No minutes yet.</p>`}</section>`;
-  } else {
-    const list = drafts.slice(0, 4);
-    cont = `<section class="sheet"><div class="sheet-h"><h2>Continue where you left off</h2><p class="lede">Drafts save on this device as you type.</p></div>
-      ${list.length ? `<ul class="rows">${list.map(docRow).join("")}</ul>` : `<p class="empty">No drafts.</p>`}
-      ${drafts.length > list.length ? `<div class="pf-foot"><button class="textbtn" type="button" data-tab="library">See all ${drafts.length} in Library</button></div>` : ""}</section>`;
-  }
-  return head + needs + cont;
-}
-
-/* ---- Tools ---- */
 const TOOLS = {
-  br: ["Budget Requests", "Letter, program flow and budget breakdown for the CSC.", "treasurer"],
-  lr: ["Liquidation Reports", "Receipts per event, with the first semester tracker.", "treasurer"],
-  minutes: ["Minutes", "Meeting details, attendance and notes, formatted.", "secretary"],
-  certs: ["Certificates", "A batch of certificates from one list of names.", "secretary"],
+  br: ["Budget Requests", "Letter, program flow and budget breakdown for the CSC."],
+  lr: ["Liquidation Reports", "Receipts per event, with the first semester tracker."],
+  minutes: ["Minutes", "Meeting details, attendance, notes and action items."],
+  certs: ["Certificates", "A batch of certificates from one list of names."],
 };
+const ROLE_TOOLS = { treasurer: ["br", "lr"], secretary: ["minutes", "certs"] };
 function openTool(k) {
   if (k === "br") return openFlow("req");
-  if (k === "lr") { openFlow("liq"); TR.go("tracker", { force: true, instant: true, noFocus: true }); return; }
+  if (k === "lr") { TR.BACK.hub = false; openFlow("liq"); TR.go("tracker", { force: true, instant: true, noFocus: true }); return; }
   if (k === "minutes") { setView("sec"); openMinutes(null); return; }
   if (k === "certs") { setView("cert"); openCerts(null); return; }
-  TR.toast(`${TOOLS[k][0]} is being drafted next`);
 }
-function renderTools() {
-  const order = ui.lens === "secretary" ? ["minutes", "certs", "br", "lr"] : ["br", "lr", "minutes", "certs"];
-  const head = titleBlock("Tools", ui.lens === "secretary" ? "Secretary tools first" : "Treasurer tools first", `<p>Switch Treasurer or Secretary to change the order. Nothing is hidden.</p>`);
-  const meta = (k) => {
-    if (k === "br") return S.stage === 0 ? (S.d.name ? "1 draft" : "No draft") : STAGE[S.stage].b;
-    if (k === "lr") { const n = REQS.filter((r) => r.ok && TR.evData(r.id).stage === 0).length; return `${n} in draft`; }
-    if (k === "minutes") { const n = minutesList().filter((m) => !m.final).length; return `${minutesList().length} meetings${n ? ` · ${n} draft` : ""}`; }
-    if (k === "certs") return `${certList().length} ${certList().length === 1 ? "batch" : "batches"}`;
-    return "";
-  };
-  const rows = order.map((k) => `<li class="hrow single"><button class="go" type="button" data-tool="${k}"><span><span class="nm">${TOOLS[k][0]}</span><span class="mt">${TOOLS[k][1]}</span></span>
-    ${meta(k) ? `<span class="soon" style="color:var(--ink-2)">${esc(meta(k))}</span>` : `<span class="soon">Drafting next</span>`}</button></li>`).join("");
-  return head + `<section class="sheet"><ul class="rows" style="border-top:0">${rows}</ul></section>`;
+const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`;
+function toolStatus(k) {
+  const all = docs();
+  if (k === "br") {
+    const cur = all.find((d) => d.key === "br:cur"), st = cur.st(), parts = [];
+    if (isReturned(st)) parts.push("1 returned");
+    else if (st.stage === 0 && (S.d.name || S.items.length)) parts.push("1 draft");
+    else if (st.stage >= 1 && st.stage <= 3) parts.push("1 " + STAGE[st.stage].t.replace(/^With/, "with"));
+    const ok = all.filter((d) => (d.kind === "bp" || d.kind === "br") && stageOf(d) === 4).length;
+    if (ok) parts.push(`${ok} approved`);
+    return parts.join(" · ") || "No requests yet";
+  }
+  if (k === "lr") {
+    let A = 0, T = 0;
+    for (const r of REQS.filter((x) => x.ok)) { const e = TR.evData(r.id); if (!e.items.length) continue; A += TR.evAllot(r); T += e.items.reduce((a, b) => a + TR.lTot(b), 0); }
+    const x = A - T;
+    return x >= 0 ? `Semester excess ${peso(x)}` : `Semester deficit (${peso(-x)})`;
+  }
+  if (k === "minutes") { const n = minutesList().filter((m) => !m.final).length; return plural(minutesList().length, "meeting", "meetings") + (n ? ` · ${n} draft` : ""); }
+  if (k === "certs") return plural(certList().length, "batch", "batches");
+  return "";
+}
+function renderHome() {
+  const u = me(), all = docs(), mine = all.filter(needsMe);
+  const head = titleBlock(`${ROLES[u.role]} · A.Y. 2026–27`, `${hello()}, ${firstName(u.name)}`);
+  const needs = mine.length ? `<section class="sheet"><div class="sheet-h"><h2>Needs your action</h2><p class="lede">Your turn on ${mine.length === 1 ? "this one" : "these"}.</p></div><ul class="rows">${mine.map(docRow).join("")}</ul></section>` : "";
+  if (signerRole()) {
+    const moving = all.filter((d) => !d.past && stageOf(d) >= 1 && stageOf(d) <= 3 && !needsMe(d));
+    return head + (needs || `<section class="sheet"><div class="sheet-h"><h2>Needs your action</h2><p class="lede">Nothing is waiting on you.</p></div></section>`) +
+      `<section class="sheet"><div class="sheet-h"><h2>On its way</h2><p class="lede">Submitted documents that are with someone else.</p></div>
+      ${moving.length ? `<ul class="rows">${moving.map(docRow).join("")}</ul>` : `<p class="empty">Nothing else is moving right now.</p>`}</section>`;
+  }
+  const tools = ROLE_TOOLS[ui.lens] || ROLE_TOOLS.treasurer;
+  const rows = tools.map((k) => `<li class="hrow single tool"><button class="go" type="button" data-tool="${k}"><span><span class="nm">${TOOLS[k][0]}</span><span class="mt">${TOOLS[k][1]}</span><span class="ts">${esc(toolStatus(k))}</span></span><svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></button></li>`).join("");
+  return head + `<section class="sheet"><div class="sheet-h"><h2>Your tools</h2></div><ul class="rows">${rows}</ul></section>` + needs;
 }
 
-/* ---- Library ---- */
+/* ---- Library: Recents by month (default), filters behind one button ---- */
 const FILTERS = [["all", "All"], ["draft", "Drafts"], ["mine", "Needs action"], ["sub", "Submitted"], ["ok", "Approved"], ["ret", "Returned"]];
+const TYPES_F = [["all", "All types"], ["br", "Budget requests"], ["lr", "Liquidation"], ["mn", "Minutes"], ["ct", "Certificates"]];
+const filtersOn = () => ui.q.trim() || ui.filter !== "all" || ui.type !== "all";
 function libMatch(d) {
   const st = d.st(), q = ui.q.trim().toLowerCase();
   if (q && !(d.title + " " + d.type + " " + d.meta).toLowerCase().includes(q)) return false;
@@ -233,22 +232,30 @@ function libMatch(d) {
   if (ui.type === "ct" && d.kind !== "ct") return false;
   return { all: true, draft: st.stage === 0 && !isReturned(st), mine: needsMe(d), sub: st.stage >= 1 && st.stage <= 3, ok: st.stage === 4, ret: isReturned(st) }[ui.filter];
 }
+const monthOf = (t) => new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(new Date(t));
 function renderLibrary() {
-  const head = titleBlock("Library", "Every document", `<p>Tap one to open it. Tap its status to see who signs.</p>`);
+  const head = titleBlock("Library", "Recents", `<p>Everything the officers worked on, newest first, by month. Tap one to open it; tap its status to see who signs.</p>`);
   const tag = (k, l, grp, cur) => `<button type="button" class="tagbtn" role="radio" aria-checked="${cur === k}" data-${grp}="${k}">${l}</button>`;
-  const ctl = `<section class="sheet"><div class="lib-ctl">
+  const on = filtersOn(), sum = [ui.q.trim() && `“${ui.q.trim()}”`, ui.filter !== "all" && FILTERS.find((f) => f[0] === ui.filter)[1], ui.type !== "all" && TYPES_F.find((f) => f[0] === ui.type)[1]].filter(Boolean).join(" · ");
+  const bar = `<div class="lib-bar"><button class="ghost sm" type="button" id="libF" aria-expanded="${!!ui.showF}" aria-controls="libCtl"><svg class="i"><use href="#i-search"/></svg>${on ? "Filters on" : "Search and filter"}</button>
+      ${on ? `<span class="lib-sum">${esc(sum)}</span><button class="textbtn" type="button" id="libClear" style="margin:0">Clear</button>` : ""}</div>`;
+  const ctl = ui.showF ? `<div class="lib-ctl" id="libCtl">
       <div class="search"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><input class="line-in" id="libQ" type="search" autocomplete="off" placeholder="Search by event or type" aria-label="Search the library" value="${esc(ui.q)}"></div>
       <div class="tags" role="radiogroup" aria-label="Status">${FILTERS.map(([k, l]) => tag(k, l, "flt", ui.filter)).join("")}</div>
-      <div class="tags" role="radiogroup" aria-label="Type">${[["all", "All types"], ["br", "Budget requests"], ["lr", "Liquidation"], ["mn", "Minutes"], ["ct", "Certificates"]].map(([k, l]) => tag(k, l, "typ", ui.type)).join("")}</div>
-    </div><ul class="rows" id="libRows">${libRows()}</ul></section>`;
-  return head + ctl;
+      <div class="tags" role="radiogroup" aria-label="Type">${TYPES_F.map(([k, l]) => tag(k, l, "typ", ui.type)).join("")}</div></div>` : "";
+  return head + `<section class="sheet lib-top">${bar}${ctl}</section><div id="libRows" class="lib-months">${libRows()}</div>`;
 }
 function libRows() {
-  const list = docs().filter(libMatch);
-  return list.length ? list.map(docRow).join("") : `<li><p class="empty">Nothing matches. Try another status or clear the search.</p></li>`;
+  const list = docs().filter(libMatch).sort((a, b) => b.at - a.at);
+  if (!list.length) return `<section class="sheet"><p class="empty">Nothing matches. Try another status or clear the search.</p></section>`;
+  const groups = [];
+  for (const d of list) { const m = monthOf(d.at), g = groups[groups.length - 1]; if (g && g.m === m) g.rows.push(d); else groups.push({ m, rows: [d] }); }
+  return groups.map((g) => `<section class="sheet"><div class="sheet-h month"><h2>${esc(g.m)}</h2><span class="lede">${plural(g.rows.length, "document", "documents")}</span></div><ul class="rows">${g.rows.map(docRow).join("")}</ul></section>`).join("");
 }
 document.addEventListener("input", (e) => { if (e.target.id === "libQ") { ui.q = e.target.value; keep(); $("#libRows").innerHTML = libRows(); } });
 document.addEventListener("click", (e) => {
+  if (e.target.closest("#libF")) { ui.showF = !ui.showF; keep(); renderHub(); if (ui.showF) $("#libQ")?.focus(); return; }
+  if (e.target.closest("#libClear")) { ui.q = ""; ui.filter = "all"; ui.type = "all"; keep(); renderHub(); return; }
   const f = e.target.closest("[data-flt],[data-typ]");
   if (!f || !f.closest("#hub")) return;
   if (f.dataset.flt) ui.filter = f.dataset.flt; else ui.type = f.dataset.typ;

@@ -40,8 +40,8 @@ function load() {
   return { v: 1, list: [SAMPLE()], cur: null, step: "list", at: 0 };
 }
 let saveT;
-function save() {
-  const c = cur(); if (c) c.updated = Date.now();
+function save(touch = true) {
+  const c = cur(); if (c && touch) c.updated = Date.now();
   try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch {}
   const b = $("#certSave"); if (b) { b.classList.add("saving"); b.querySelector(".t").textContent = "Saving…"; clearTimeout(saveT); saveT = setTimeout(() => { b.classList.remove("saving"); b.querySelector(".t").textContent = "Saved"; }, 600); }
 }
@@ -103,9 +103,9 @@ const root = $("#cert");
 const dShort = (d) => (d ? new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric" }).format(new Date(d + "T00:00")) : "No date");
 const batchTitle = (c) => `${TYPES[c.type].label} · ${c.event || "Untitled event"}`;
 
-export function openCerts(id) { DB.cur = id || null; DB.step = id ? "review" : "list"; DB.at = 0; save(); render(); root.scrollTop = 0; }
+export function openCerts(id) { DB.back = id ? "hub" : null; DB.cur = id || null; DB.step = id ? "review" : "list"; DB.at = 0; save(false); render(); root.scrollTop = 0; }
 export const showCerts = () => render();
-function go(step) { DB.step = step; save(); render(); root.scrollTop = 0; $("#certMain h2")?.focus({ preventScroll: true }); }
+function go(step) { DB.step = step; save(false); render(); root.scrollTop = 0; $("#certMain h2")?.focus({ preventScroll: true }); }
 
 function stepDone(c, k) {
   if (!c) return false;
@@ -200,13 +200,13 @@ root.addEventListener("input", (e) => {
 root.addEventListener("click", (e) => {
   const c = cur(), q = (s) => e.target.closest(s);
   if (q("[data-cclose]")) {
-    if (DB.step !== "list") { DB.step = "list"; DB.cur = null; save(); render(); TR.toast("Saved. Back to your batches"); }
-    else dispatchEvent(new CustomEvent("hub:home"));
+    if (DB.step !== "list" && !DB.back) { DB.step = "list"; DB.cur = null; save(false); render(); TR.toast("Saved. Back to your batches"); }
+    else { DB.back = null; DB.step = "list"; DB.cur = null; save(false); dispatchEvent(new CustomEvent("hub:home")); }
     return;
   }
   const g = q("[data-cgo]"); if (g) { go(g.dataset.cgo); return; }
-  const o = q("[data-copen]"); if (o) { DB.cur = o.dataset.copen; DB.at = 0; go("review"); return; }
-  if (q("#cNew")) { const n = blank(); DB.list.unshift(n); DB.cur = n.id; go("details"); return; }
+  const o = q("[data-copen]"); if (o) { DB.back = null; DB.cur = o.dataset.copen; DB.at = 0; go("review"); return; }
+  if (q("#cNew")) { DB.back = null; const n = blank(); DB.list.unshift(n); DB.cur = n.id; go("details"); return; }
   if (!c) return;
   const ty = q("[data-ctype]");
   if (ty) { c.type = ty.dataset.ctype; if (!c.reasonEdited) c.reason = TYPES[c.type].reason(c.event || "[event]"); save(); render(); return; }
@@ -216,8 +216,8 @@ root.addEventListener("click", (e) => {
     TR.toast("Batch deleted", () => { DB.list.splice(i, 0, c); DB.cur = c.id; DB.step = "details"; save(); render(); });
     return;
   }
-  if (q("#cPrev")) { DB.at = Math.max(0, DB.at - 1); save(); render(); $("#cPrev")?.focus(); return; }
-  if (q("#cNext")) { DB.at = DB.at + 1; save(); render(); $("#cNext")?.focus(); return; }
+  if (q("#cPrev")) { DB.at = Math.max(0, DB.at - 1); save(false); render(); $("#cPrev")?.focus(); return; }
+  if (q("#cNext")) { DB.at = DB.at + 1; save(false); render(); $("#cNext")?.focus(); return; }
   if (q("#cPrint")) {
     const P = people(c); if (!P.length) { TR.toast("Add names first"); return; }
     $("#printArea").innerHTML = `<div class="cpaper cprint">${P.map((p) => certHTML(c, p)).join("")}</div>`;

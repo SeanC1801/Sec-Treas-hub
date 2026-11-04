@@ -145,3 +145,17 @@
 .si-mark .logos img{height:40px} .si-mark .logos .acm{height:34px}
 .hub-title .logos{margin-bottom:var(--s4)}
 .hub-title .logos img{height:36px} .hub-title .logos .acm{height:31px}
+
+/* Home: tools with their status */
+.hrow.tool .go{min-height:84px;padding-top:var(--s4);padding-bottom:var(--s4)}
+.hrow.tool .nm{font-size:17px;line-height:24px}
+.hrow .ts{display:block;margin-top:var(--s2);font-size:13px;line-height:18px;font-weight:700;color:var(--action);font-variant-numeric:tabular-nums}
+
+/* Library: one bar, months as sheets */
+.lib-top{padding:0}
+.lib-bar{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap;padding:var(--s3) var(--s4)}
+.lib-sum{flex:1;min-width:0;font-size:13px;line-height:18px;font-weight:600;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lib-top .lib-ctl{border-top:1px solid var(--rule)}
+.lib-months{display:grid;gap:var(--s3)}
+.sheet-h.month{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s3);padding-top:var(--s4)}
+.sheet-h.month h2{margin:0}
