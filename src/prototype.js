@@ -100,7 +100,7 @@ function parse(text){
 let saveT;
 function setSave(kind){$$("[data-save]").forEach(s=>{s.classList.remove("saving","offline");const t=s.querySelector(".t"),sr=s.querySelector("[data-save-sr]");
   const txt=kind==="saving"?"Saving…":kind==="offline"?"Saved on this device":"Saved";if(kind!=="saved")s.classList.add(kind);t.textContent=txt;if(sr)sr.textContent=txt;});}
-function saved(){if(S.offline){setSave("offline");return;}setSave("saving");clearTimeout(saveT);saveT=setTimeout(()=>setSave("saved"),650);}
+function saved(){persist();if(S.offline){setSave("offline");return;}setSave("saving");clearTimeout(saveT);saveT=setTimeout(()=>setSave("saved"),650);}
 
 /* ================= budget lines: quick add [Bea] =================
    "Food 450 light refreshments for guests" · "Prizes 500 para sa minigames" · "450 snacks for the guests" · "Cash prizes ₱1,000" */
@@ -319,7 +319,7 @@ function renderMeta(){const liq=AREA==="liq",Dd=D(),d=Dd.d,stp=Dd.step,F=FLOW[AR
 }
 
 /* ================= navigation ================= */
-function go(step,o={}){
+function go(step,o={}){queueMicrotask(persist);
   const liq=AREA==="liq",Dd=D(),F=FLOW[AREA];
   if(step==="edit")step="items";
   if(liq&&!L.req&&(step==="review"||step==="done")){toast("Choose an approved request first");step="details";}
@@ -462,7 +462,7 @@ function submit(){const liq=AREA==="liq";if(liq&&!L.req){go("review");return;}
   const need=liq?L.items.filter(i=>!lp(i)):S.items.filter(i=>!priced(i));
   if(need.length){$("#needBanner").hidden=false;toast(liq?"Add the missing price first":"Add the missing amount first");$("#needFix").focus();return;}
   const now=new Date();D().submitted=now;D().stage=1;
-  $("#stampDate").textContent=new Intl.DateTimeFormat("en-PH",{month:"short",day:"numeric",year:"numeric"}).format(now).toUpperCase().replace(",","")+" · "+new Intl.DateTimeFormat("en-PH",{hour:"numeric",minute:"2-digit"}).format(now).toUpperCase();
+  setStamp(now);
   go("done",{noFocus:true});setTimeout(()=>$("#homeBtn")&&$("#homeBtn").focus(),60);}
 $("#needFix").addEventListener("click",()=>{
   if(AREA==="liq"){go("edit");const it=L.items.find(i=>!lp(i));if(it)setTimeout(()=>toggleL(it.id),240);return;}
@@ -747,7 +747,31 @@ function setArea(a,o={}){if(a===AREA&&!o.force)return;AREA=a;
   closePop();closeZoom(true);$("#resetConfirm").hidden=true;$("#lresetConfirm").hidden=true;
   go(D().step,{instant:true,noFocus:true,force:true});}
 
-/* ================= review controls (not part of the product) ================= */
+/* ================= saving on this device (front-end draft; the server comes later) ================= */
+const SAVE_KEY="sectreas:treasurer:v1";let BOOTED=false;
+function setStamp(d){$("#stampDate").textContent=new Intl.DateTimeFormat("en-PH",{month:"short",day:"numeric",year:"numeric"}).format(d).toUpperCase().replace(",","")+" · "+new Intl.DateTimeFormat("en-PH",{hour:"numeric",minute:"2-digit"}).format(d).toUpperCase();}
+function persist(){if(!BOOTED)return;
+  const lrs={...LRS};if(L.req)lrs[L.req.id]=snapL();
+  const data={v:1,at:Date.now(),area:AREA,
+    S:{items:S.items,uid:S.uid,step:S.step,stage:S.stage,submitted:S.submitted,d:S.d},
+    L:{step:L.step,req:L.req&&L.req.id},LRS:lrs};
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify(data));}catch(e){}}
+function loadSaved(){try{const d=JSON.parse(localStorage.getItem(SAVE_KEY)||"null");return d&&d.v===1?d:null;}catch(e){return null;}}
+function wipeSaved(){try{localStorage.removeItem(SAVE_KEY);}catch(e){}}
+const toDate=v=>v?new Date(v):null;
+function restore(d){
+  Object.assign(S,{mode:"filled",open:null,offline:!navigator.onLine,...d.S,submitted:toDate(d.S.submitted)});S.shown=total();syncDetails();renderLedger();
+  clearReq();for(const k in LRS)delete LRS[k];
+  for(const [k,v] of Object.entries(d.LRS||{}))LRS[k]={...v,submitted:toDate(v.submitted)};
+  if(d.L.req)pickReq(d.L.req);L.step=d.L.step||"tracker";L.shown=lActual();renderReqs();renderLedgerL();
+  setArea(d.area==="liq"?"liq":"req",{force:true});
+  const sub=D().submitted;if(sub)setStamp(sub);
+  const st=D().step||"details";go(st,{instant:true,noFocus:true,force:true});}
+addEventListener("pagehide",persist);
+addEventListener("offline",()=>{S.offline=true;setSave("offline");toast("You’re offline. Changes save on this device and sync later");});
+addEventListener("online",()=>{S.offline=false;saved();});
+
+/* ================= sample data (first run only; ?state= and ?reset in the URL for testing) ================= */
 function setState(m){S.mode=m;S.uid=0;S.open=null;S.offline=m==="offline";S.submitted=null;S.stage=0;
   if(m==="empty"){S.items=[];S.d=blankD();}
   else{S.items=SAMPLE.map(s=>({id:++S.uid,...s}));
@@ -775,9 +799,14 @@ new ResizeObserver(()=>{const d=$("#device");d.classList.toggle("tall",d.clientH
 const qs=new URLSearchParams(location.search);
 if(qs.get("view")==="phone"){document.body.classList.add("phone");$$("[data-view]").forEach(x=>x.setAttribute("aria-pressed",x.dataset.view==="phone"));}
 if(qs.get("glass")==="solid")document.body.classList.add("solid");
+if(qs.has("reset")){wipeSaved();qs.delete("reset");history.replaceState(null,"",location.pathname+(qs.size?"?"+qs:"")+location.hash);}
+const snap0=qs.get("state")?null:loadSaved();
+if(snap0){restore(snap0);}
+else{
 const st0=qs.get("state")||"filled";setState(st0);setStateL(st0);
 const a0=(qs.get("area")==="liq"||/^#liquidation/.test(location.hash))?"liq":"req";
 setArea(a0,{force:true});
 const st=qs.get("step")||(a0==="liq"?"tracker":"details");
-if(st==="done"||st==="approved")reviewGo(st);else go(st,{instant:true,noFocus:true,force:true});
+if(st==="done"||st==="approved")reviewGo(st);else go(st,{instant:true,noFocus:true,force:true});}
+BOOTED=true;persist();
 if(qs.get("type")){(AREA==="liq"?$("#lqa"):$("#qa")).value=qs.get("type");(AREA==="liq"?renderReadsL:renderReads)();}
