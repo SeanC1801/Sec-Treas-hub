@@ -279,28 +279,43 @@ const GUIDE = {
   president: ["Documents waiting for your signature show in your to-do list.", "Open one, check it, then mark it as signed or return it with a note.", "Events shows where every document stands."],
   adviser: ["Documents waiting for your note show in your to-do list.", "Open one, check it, then mark it as noted or return it with a note.", "Events shows where every document stands."],
 };
+// Home's main sections open and close from their heading band
+const SEC_DEFAULT = { todo: true, tools: true, coming: false, guide: false };
+const secOpen = (id) => ((ui.secOpen || {})[id] ?? SEC_DEFAULT[id]);
+function homeSection(id, kind, title, right, body) {
+  const open = secOpen(id);
+  return `<section class="sheet home-sec${open ? " open" : ""}"><button class="sheet-h band ${kind} band-btn" type="button" data-sec="${id}" aria-expanded="${open}" aria-controls="hs-${id}">
+      <h2>${esc(title)}</h2><span class="band-r">${right ? `<span>${esc(right)}</span>` : ""}<svg class="i chev" aria-hidden="true"><use href="#i-chev"/></svg></span></button>
+    <div id="hs-${id}"${open ? "" : " hidden"}>${open ? body : ""}</div></section>`;
+}
 function renderHome() {
   const u = me(), role = lensRole(), all = docs(), T = todos();
   const head = titleBlock(`${ROLES[u.role]} · A.Y. 2026–27`, `${hello()}, ${firstName(u.name)}`, `<p>${signerRole() ? "Here’s what needs you today." : `Here’s what to do next as ${role === "secretary" ? "Secretary" : "Treasurer"}.`}</p>`);
-  const todo = `<section class="sheet">${bandK("todo", "To do", T.length ? String(T.length) : "")}${T.length ? `<ul class="rows">${(ui.todoAll ? T : T.slice(0, 4)).map(todoRow).join("")}</ul>${T.length > 4 ? `<div class="pf-foot"><span></span><button class="textbtn" type="button" id="todoAll">${ui.todoAll ? "Show fewer" : `Show all ${T.length}`}</button></div>` : ""}` : `<p class="empty">You’re all caught up.</p>`}</section>`;
-  let tools = "";
+  const todo = homeSection("todo", "todo", "To do", T.length ? String(T.length) : "",
+    T.length ? `<ul class="rows">${(ui.todoAll ? T : T.slice(0, 4)).map(todoRow).join("")}</ul>${T.length > 4 ? `<div class="pf-foot"><span></span><button class="textbtn" type="button" id="todoAll">${ui.todoAll ? "Show fewer" : `Show all ${T.length}`}</button></div>` : ""}` : `<p class="empty">You’re all caught up.</p>`);
+  let tools;
   if (!signerRole()) {
     const tl = ROLE_TOOLS[role] || ROLE_TOOLS.treasurer;
-    tools = `<section class="sheet">${bandK(roleKind(), "Your tools", "Start and continue work")}<ul class="rows">${tl.map((k) => {
+    tools = homeSection("tools", "tre", "Your tools", "Start and continue work", `<ul class="rows">${tl.map((k) => {
       const open = ui.toolOpen === k;
       return `<li class="hrow single ev tool${open ? " open" : ""}"><button class="go ev-h" type="button" data-toolopen="${k}" aria-expanded="${open}"><span><span class="nm">${TOOLS[k][0]}</span><span class="mt">${TOOLS[k][1]}</span><span class="ts">${esc(toolStatus(k))}</span></span><svg class="i chev" aria-hidden="true"><use href="#i-chev"/></svg></button>${open ? `<div class="tool-drop">${toolDrop(k)}</div>` : ""}</li>`;
-    }).join("")}</ul></section>`;
+    }).join("")}</ul>`);
   } else {
     const moving = all.filter((d) => !d.past && stageOf(d) >= 1 && stageOf(d) <= 3 && !needsMe(d));
-    tools = `<section class="sheet">${bandK("tre", "On its way", plural(moving.length, "document", "documents"))}${moving.length ? `<ul class="rows">${moving.map(docRow).join("")}</ul>` : `<p class="empty">Nothing else is moving right now.</p>`}</section>`;
+    tools = homeSection("tools", "tre", "On its way", plural(moving.length, "document", "documents"), moving.length ? `<ul class="rows">${moving.map(docRow).join("")}</ul>` : `<p class="empty">Nothing else is moving right now.</p>`);
   }
   const now = new Date(), soon = eventList().filter((e) => e.date && new Date(e.date + "T23:59") >= now && new Date(e.date + "T00:00") - now < 31 * 864e5).sort((a, b) => a.date.localeCompare(b.date));
-  const coming = `<section class="sheet">${bandK("month", "Coming up", "Next 30 days")}${soon.length ? `<ul class="rows">${soon.map((e) => `<li class="hrow single"><button class="go" type="button" data-goevent="${e.id}"><span><span class="nm">${esc(e.name)}</span><span class="mt">${esc(dShort(e.date))}${e.venue ? " · " + esc(e.venue) : ""}</span><span class="ts">${esc(eventSummary(e, eventDocs(e)))}</span></span><svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></button></li>`).join("")}</ul>` : `<p class="empty">No events in the next 30 days.</p>`}</section>`;
-  const gk = signerRole() ? u.role : role, off = (ui.guideOff || {})[gk];
-  const guide = off ? `<div class="guide-show"><button class="textbtn" type="button" data-guide="${gk}">Show how the hub works for you</button></div>`
-    : `<section class="sheet">${bandK(signerRole() ? "navy" : roleKind(), `Your role in ${GUIDE[gk].length} steps`)}<ol class="guide">${GUIDE[gk].map((g) => `<li>${esc(g)}</li>`).join("")}</ol><div class="pf-foot"><span></span><button class="textbtn" type="button" data-guide="${gk}">Hide the guide</button></div></section>`;
+  const coming = homeSection("coming", "tre", "Coming up", soon.length ? plural(soon.length, "event", "events") : "Next 30 days",
+    soon.length ? `<ul class="rows">${soon.map((e) => `<li class="hrow single"><button class="go" type="button" data-goevent="${e.id}"><span><span class="nm">${esc(e.name)}</span><span class="mt">${esc(dShort(e.date))}${e.venue ? " · " + esc(e.venue) : ""}</span><span class="ts">${esc(eventSummary(e, eventDocs(e)))}</span></span><svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></button></li>`).join("")}</ul>` : `<p class="empty">No events in the next 30 days.</p>`);
+  const gk = signerRole() ? u.role : role;
+  const guide = homeSection("guide", "tre", `Your role in ${GUIDE[gk].length} steps`, "", `<ol class="guide">${GUIDE[gk].map((g) => `<li>${esc(g)}</li>`).join("")}</ol><div style="height:var(--s4)"></div>`);
   return head + todo + tools + coming + guide;
 }
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-sec]"); if (!b || !b.closest("#hub")) return;
+  ui.secOpen = { ...(ui.secOpen || {}), [b.dataset.sec]: !secOpen(b.dataset.sec) }; keep(); renderHub();
+  document.querySelector(`[data-sec="${b.dataset.sec}"]`)?.focus();
+});
 document.addEventListener("click", (e) => {
   const c = (s) => e.target.closest(s); if (!e.target.closest("#hub")) return;
   const to = c("[data-toolopen]"); if (to) { ui.toolOpen = ui.toolOpen === to.dataset.toolopen ? null : to.dataset.toolopen; ui.pick = null; keep(); renderHub(); document.querySelector(`[data-toolopen="${to.dataset.toolopen}"]`)?.focus(); return; }
