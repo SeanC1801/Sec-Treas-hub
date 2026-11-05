@@ -191,7 +191,8 @@
 
 /* heading bands by kind (white text, 19 px bold): to do = amber, Treasurer = chapter blue,
    Secretary = teal, account and records = navy; months stay chapter blue */
-.sheet-h.band.todo{background:#B5651D}
+.sheet-h.band.todo{background:#5CE1E6;color:var(--ink)} /* ACM cyan from the letterhead; dark ink text (10:1) */
+.sheet-h.band.todo h2,.sheet-h.band.todo span{color:var(--ink)}
 .sheet-h.band.tre,.sheet-h.band.month{background:#4C94D8}
 .sheet-h.band.sec{background:#1F7A75}
 .sheet-h.band.navy{background:#0B2A4A}
