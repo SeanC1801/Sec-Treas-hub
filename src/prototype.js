@@ -105,7 +105,7 @@ function parse(text){
 let saveT;
 function setSave(kind){$$("[data-save]").forEach(s=>{s.classList.remove("saving","offline");const t=s.querySelector(".t"),sr=s.querySelector("[data-save-sr]");
   const txt=kind==="saving"?"Saving…":kind==="offline"?"Saved on this device":"Saved";if(kind!=="saved")s.classList.add(kind);t.textContent=txt;if(sr)sr.textContent=txt;});}
-function saved(){stampPreparer();if(BOOTED){const d=D();if(d&&(AREA==="req"||L.req))d.updated=Date.now();}persist();if(S.offline){setSave("offline");return;}setSave("saving");clearTimeout(saveT);saveT=setTimeout(()=>setSave("saved"),650);}
+function saved(){stampPreparer();syncApproved();if(BOOTED){const d=D();if(d&&(AREA==="req"||L.req))d.updated=Date.now();}persist();if(S.offline){setSave("offline");return;}setSave("saving");clearTimeout(saveT);saveT=setTimeout(()=>setSave("saved"),650);}
 
 /* ================= budget lines: quick add [Bea] =================
    "Food 450 light refreshments for guests" · "Prizes 500 para sa minigames" · "450 snacks for the guests" · "Cash prizes ₱1,000" */
@@ -583,7 +583,7 @@ function trkRow(id){const{r,items,stage}=evData(id),A=evAllot(r),T=items.reduce(
       <span class="c-n tab">${A==null?"—":nf.format(T)}</span><span class="c-n tab">${A==null?"—":nf.format(A)}</span><span class="c-amt">${ex}</span>
     </button>
     <div class="editor" id="tv-${id}"><div><div class="trk-ed">${body}${acts}</div></div></div></div>`;}
-function semTotals(){let T=0,A=0,over=0;REQS.forEach(r=>{const a=evAllot(r);if(a==null)return;const t=evData(r.id).items.reduce((s,b)=>s+lTot(b),0);T+=t;A+=a;if(t>a)over++;});return{T,A,over,n:REQS.length};}
+function semTotals(){let T=0,A=0,over=0;REQS.forEach(r=>{const a=evAllot(r);if(a==null)return;const its=evData(r.id).items;if(!its.length)return;/* an event counts once it has receipts */const t=its.reduce((s,b)=>s+lTot(b),0);T+=t;A+=a;if(t>a)over++;});return{T,A,over,n:REQS.length};}
 function renderTracker(){
   $("#trkRows").innerHTML=REQS.map(r=>trkRow(r.id)).join("");
   const{T,A}=semTotals(),df=A-T;
@@ -805,6 +805,25 @@ function setArea(a,o={}){if(a===AREA&&!o.force)return;AREA=a;
   closePop();closeZoom(true);$("#resetConfirm").hidden=true;$("#lresetConfirm").hidden=true;
   go(D().step,{instant:true,noFocus:true,force:true});}
 
+/* ================= one budget request per event: S is the open one, BRS keeps the others ================= */
+const BRS={};
+const snapS=()=>JSON.parse(JSON.stringify({ev:S.ev||null,items:S.items,uid:S.uid,step:S.step,stage:S.stage,submitted:S.submitted,d:S.d,log:S.log||[],preparedBy:S.preparedBy||null,updated:S.updated||null}));
+function loadS(snap){Object.assign(S,{open:null,mode:"filled",log:[],preparedBy:null,updated:null,...snap,submitted:snap.submitted?new Date(snap.submitted):null});
+  S.shown=total();syncDetails();renderLedger();if(S.submitted)setStamp(S.submitted);}
+function openBR(ev,pre){if(S.ev===ev)return;
+  if(S.ev)BRS[S.ev]=snapS();
+  const s=BRS[ev];
+  if(s){delete BRS[ev];loadS(s);}
+  else loadS({ev,items:[],uid:0,step:"details",stage:0,submitted:null,d:{...blankD(),...(pre||{})},log:[],preparedBy:null,updated:Date.now()});
+  persist();}
+const brState=ev=>S.ev===ev?S:(BRS[ev]||null);
+const brList=()=>[...(S.ev?[S.ev]:[]),...Object.keys(BRS)];
+/* an approved budget request becomes a request you can liquidate */
+function syncApproved(){for(const ev of brList()){const st=brState(ev);if(!st||st.stage!==4||REQS.some(r=>r.id===ev))continue;
+  const at=(st.log||[]).filter(x=>x.to===4).pop();
+  REQS.push({id:ev,name:st.d.name||"Untitled event",short:st.d.name,date:st.d.date,venue:st.d.venue,fund:fundLabel(st.d),ok:true,fromBR:true,
+    approved:at?new Intl.DateTimeFormat("en-PH",{month:"short",day:"numeric"}).format(new Date(at.at)):"",items:st.items.map(i=>[i.cat,i.note||"",amt(i)])});}}
+
 /* where × goes: a report opened from the hub closes back to the hub, not the tracker */
 const BACK={hub:false};
 
@@ -821,13 +840,16 @@ function setStamp(d){$("#stampDate").textContent=new Intl.DateTimeFormat("en-PH"
 function persist(){if(!BOOTED)return;
   const lrs={...LRS};if(L.req)lrs[L.req.id]=snapL();
   const data={v:1,at:Date.now(),area:AREA,
-    S:{items:S.items,uid:S.uid,step:S.step,stage:S.stage,submitted:S.submitted,d:S.d,log:S.log||[],preparedBy:S.preparedBy||null,updated:S.updated||null},
-    L:{step:L.step,req:L.req&&L.req.id},LRS:lrs};
+    S:{ev:S.ev||null,items:S.items,uid:S.uid,step:S.step,stage:S.stage,submitted:S.submitted,d:S.d,log:S.log||[],preparedBy:S.preparedBy||null,updated:S.updated||null},
+    BRS:{...BRS},L:{step:L.step,req:L.req&&L.req.id},LRS:lrs};
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(data));}catch(e){}}
 function loadSaved(){try{const d=JSON.parse(localStorage.getItem(SAVE_KEY)||"null");return d&&d.v===1?d:null;}catch(e){return null;}}
 function wipeSaved(){try{localStorage.removeItem(SAVE_KEY);}catch(e){}}
 const toDate=v=>v?new Date(v):null;
 function restore(d){
+  for(const k in BRS)delete BRS[k];Object.assign(BRS,d.BRS||{});
+  if(!d.S.ev)d.S.ev="hack";
+  syncApproved();
   Object.assign(S,{mode:"filled",open:null,offline:!navigator.onLine,...d.S,submitted:toDate(d.S.submitted)});S.shown=total();syncDetails();renderLedger();
   clearReq();for(const k in LRS)delete LRS[k];
   for(const [k,v] of Object.entries(d.LRS||{}))LRS[k]={...v,submitted:toDate(v.submitted)};
@@ -840,7 +862,7 @@ addEventListener("offline",()=>{S.offline=true;setSave("offline");toast("You’r
 addEventListener("online",()=>{S.offline=false;saved();});
 
 /* ================= sample data (first run only; ?state= and ?reset in the URL for testing) ================= */
-function setState(m){S.mode=m;S.log=[];S.preparedBy=null;S.uid=0;S.open=null;S.offline=m==="offline";S.submitted=null;S.stage=0;
+function setState(m){S.mode=m;S.log=[];S.preparedBy=null;S.ev="hack";for(const k in BRS)delete BRS[k];S.uid=0;S.open=null;S.offline=m==="offline";S.submitted=null;S.stage=0;
   if(m==="empty"){S.items=[];S.d=blankD();}
   else{S.items=SAMPLE.map(s=>({id:++S.uid,...s}));
     S.d={...blankD(),name:"ACM-AUF Hackathon 2026",date:"2026-11-21",venue:"Computer Laboratory",participants:"AUF CCS Students",allot:m==="over"?"10000":"15000",
@@ -880,5 +902,5 @@ BOOTED=true;persist();
 if(qs.get("type")){(AREA==="liq"?$("#lqa"):$("#qa")).value=qs.get("type");(AREA==="liq"?renderReadsL:renderReads)();}
 
 /* the hub shell (src/hub.js) drives the flows through this */
-export const TR={BACK,prep,S,L,LRS,REQS,ORG,STAGE,evData,evAllot,reqTot,lTot,total,go,setArea,pickReq,openEvent,snapL,saved,toast,logStage,setStamp,
+export const TR={BRS,openBR,brState,brList,syncApproved,BACK,prep,S,L,LRS,REQS,ORG,STAGE,evData,evAllot,reqTot,lTot,total,go,setArea,pickReq,openEvent,snapL,saved,toast,logStage,setStamp,
   area:()=>AREA,doc:()=>D(),stampFmt};

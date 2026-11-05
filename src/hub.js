@@ -4,7 +4,8 @@
 import { TR } from "./prototype.js";
 import { ROLES, getSession, setSession, me } from "./session.js";
 import { minutesList, openMinutes, showMinutes } from "./minutes.js";
-import { certList, openCerts, showCerts, TYPES as CERT_TYPES } from "./certs.js";
+import { certList, openCerts, showCerts, newBatch, TYPES as CERT_TYPES } from "./certs.js";
+import { eventList, eventById, addEvent, updateEvent, removeEvent, restoreEvent, sameEvent, mentions } from "./events.js";
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -54,11 +55,14 @@ function lrState(id) {
 }
 function docs() {
   const out = [];
-  out.push({
-    key: "br:cur", kind: "br", title: S.d.name || "Untitled budget request", type: "Budget request",
-    meta: [S.d.date ? dShort(S.d.date) : "No date yet", S.items.length ? peso(TR.total()) : "No lines yet"].join(" · "),
-    at: S.updated || lastAt(S) || Date.now(), st: () => S, open: () => openFlow("req"),
-  });
+  for (const ev of TR.brList()) {
+    const b = TR.brState(ev), e = eventById(ev), sum = b.items.reduce((a, i) => a + (Number(i.amt) || 0), 0);
+    out.push({
+      key: "br:" + ev, kind: "br", ev, title: b.d.name || (e && e.name) || "Untitled budget request", type: "Budget request",
+      meta: [b.d.date ? dShort(b.d.date) : "No date yet", b.items.length ? peso(sum) : "No lines yet"].join(" · "),
+      at: b.updated || lastAt(b) || Date.now(), st: () => TR.brState(ev), open: () => openBR(ev),
+    });
+  }
   for (const r of REQS.filter((x) => x.ok)) {
     const e = TR.evData(r.id), A = TR.evAllot(r), T = e.items.reduce((a, b) => a + TR.lTot(b), 0);
     out.push({
@@ -68,7 +72,7 @@ function docs() {
       st: () => lrState(r.id), open: () => { TR.BACK.hub = true; openFlow("liq", r.id); },
     });
   }
-  for (const r of REQS.filter((x) => x.ok)) {
+  for (const r of REQS.filter((x) => x.ok && !x.fromBR)) {
     out.push({
       key: "bp:" + r.id, kind: "bp", id: r.id, title: r.short || r.name, type: "Budget request", past: true,
       meta: `Approved${r.approved ? " " + r.approved : ""} · ${peso(TR.reqTot(r))}`,
@@ -107,6 +111,7 @@ function setView(v) {
   if (v === "cert") showCerts();
 }
 addEventListener("hub:home", () => setView("hub"));
+function openBR(ev, pre) { TR.openBR(ev, pre); openFlow("req"); }
 function openFlow(area, lrId) {
   setView("flow");
   if (area === "liq") {
@@ -120,7 +125,7 @@ addEventListener("hub:close", () => { setView("hub"); TR.toast("Saved. You’re 
 $("#apphead .hd-mark")?.addEventListener("click", (e) => { e.preventDefault(); setView("hub"); });
 
 /* ---------------- hub chrome: Home · Library · Profile ---------------- */
-const TABS = [["home", "Home", "i-home"], ["library", "Library", "i-lib"], ["profile", "Profile", "i-user"]];
+const TABS = [["home", "Home", "i-home"], ["events", "Events", "i-cal"], ["library", "Library", "i-lib"], ["profile", "Profile", "i-user"]];
 const signerRole = () => me().role === "president" || me().role === "adviser";
 function renderChrome() {
   if (!TABS.some((t) => t[0] === ui.tab)) ui.tab = "home";
@@ -131,7 +136,7 @@ function renderChrome() {
   const lens = (k, l) => `<button type="button" role="radio" data-lens="${k}" aria-checked="${ui.lens === k}"${ui.lens === k ? ' aria-current="page"' : ""}>${l}</button>`;
   $("#roleSwitch").innerHTML = lens("treasurer", "Treasurer") + lens("secretary", "Secretary");
   // the switch only changes Home's tools, so it shows on Home, for the officers who have tools
-  $("#roleSwitch").hidden = ui.tab !== "home" || signerRole();
+  $("#roleSwitch").hidden = !(ui.tab === "home" || ui.tab === "events") || signerRole();
 }
 document.addEventListener("click", (e) => {
   const t = e.target.closest("[data-tab]");
@@ -147,7 +152,7 @@ function titleBlock(kicker, h1, extra = "") {
 }
 function renderHub() {
   renderChrome();
-  const T = { home: renderHome, library: renderLibrary, profile: renderProfile }[ui.tab] || renderHome;
+  const T = { home: renderHome, events: renderEvents, library: renderLibrary, profile: renderProfile }[ui.tab] || renderHome;
   $("#hubMain").innerHTML = T();
 }
 
@@ -186,10 +191,9 @@ const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`;
 function toolStatus(k) {
   const all = docs();
   if (k === "br") {
-    const cur = all.find((d) => d.key === "br:cur"), st = cur.st(), parts = [];
-    if (isReturned(st)) parts.push("1 returned");
-    else if (st.stage === 0 && (S.d.name || S.items.length)) parts.push("1 draft");
-    else if (st.stage >= 1 && st.stage <= 3) parts.push("1 " + STAGE[st.stage].t.replace(/^With/, "with"));
+    const brs = all.filter((d) => d.kind === "br"), parts = [];
+    const ret = brs.filter((d) => isReturned(d.st())).length, dr = brs.filter((d) => stageOf(d) === 0 && !isReturned(d.st())).length, mv = brs.filter((d) => stageOf(d) >= 1 && stageOf(d) <= 3).length;
+    if (ret) parts.push(`${ret} returned`); if (dr) parts.push(plural(dr, "draft", "drafts")); if (mv) parts.push(`${mv} moving`);
     const ok = all.filter((d) => (d.kind === "bp" || d.kind === "br") && stageOf(d) === 4).length;
     if (ok) parts.push(`${ok} approved`);
     return parts.join(" · ") || "No requests yet";
@@ -261,6 +265,93 @@ document.addEventListener("click", (e) => {
   if (f.dataset.flt) ui.filter = f.dataset.flt; else ui.type = f.dataset.typ;
   keep(); renderHub();
 });
+
+/* ---- Events: each activity, and every document that belongs to it ---- */
+const dMonth = (d) => (d ? new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(new Date(d + "T00:00")) : "Date not set");
+function eventDocs(e) {
+  const b = TR.brState(e.id), r = REQS.find((x) => x.id === e.id && x.ok);
+  const bp = r && !r.fromBR ? r : null;
+  const lr = r ? { r, e: TR.evData(r.id) } : null;
+  const certs = certList().filter((c) => c.evId === e.id || (!c.evId && sameEvent(e, c.event)));
+  const mins = minutesList().filter((m) => mentions(e, m));
+  return { b, bp, lr, certs, mins };
+}
+const brLabel = (st) => (isReturned(st) ? "Returned" : STAGE[st.stage].b);
+function eventSummary(e, x) {
+  const p = [];
+  if (x.b) p.push(x.b.stage === 4 ? "Budget approved" : isReturned(x.b) ? "Budget returned" : x.b.stage === 0 ? "Budget draft" : "Budget " + STAGE[x.b.stage].b.toLowerCase());
+  else if (x.bp) p.push("Budget approved"); else p.push("No budget yet");
+  if (x.lr && x.lr.e.items.length) p.push(["LR draft", "LR with President", "LR with Adviser", "LR with CSC", "LR approved"][x.lr.e.stage]);
+  if (x.certs.length) p.push(plural(x.certs.length, "certificate batch", "certificate batches"));
+  if (x.mins.length) p.push(plural(x.mins.length, "meeting", "meetings"));
+  return p.join(" · ");
+}
+const docBtn = (attrs, label, sub, status, cls = "") => `<li><button class="ev-doc" type="button" ${attrs}><span><span class="k">${esc(label)}</span><span class="s">${esc(sub)}</span></span>${status ? `<span class="stbtn ${cls}" style="text-decoration:none">${esc(status)}</span>` : ""}</button></li>`;
+const addBtn = (attrs, label) => `<li><button class="ev-doc add" type="button" ${attrs}><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg><span class="k">${esc(label)}</span></button></li>`;
+const noteRow = (label, sub) => `<li><div class="ev-doc off"><span><span class="k">${esc(label)}</span><span class="s">${esc(sub)}</span></span></div></li>`;
+function eventDrop(e, x) {
+  const parts = {
+    br: x.b ? docBtn(`data-evbr="${e.id}"`, "Budget Request", [x.b.d.date ? dShort(x.b.d.date) : "No date yet", x.b.items.length ? peso(x.b.items.reduce((a, i) => a + (Number(i.amt) || 0), 0)) : "No lines yet"].join(" · "), brLabel(x.b), isReturned(x.b) ? "ret" : "s" + x.b.stage)
+      : x.bp ? docBtn(`data-path="bp:${x.bp.id}"`, "Budget Request", `Approved${x.bp.approved ? " " + x.bp.approved : ""} · ${peso(TR.reqTot(x.bp))}`, "Approved", "s4")
+      : addBtn(`data-evbrnew="${e.id}"`, "Start budget request"),
+    lr: x.lr ? docBtn(`data-evlr="${e.id}"`, "Liquidation Report", x.lr.e.items.length ? `${peso(x.lr.e.items.reduce((a, b) => a + TR.lTot(b), 0))} of ${peso(TR.evAllot(x.lr.r))}` : `Not started · ${peso(TR.evAllot(x.lr.r))} allotted`, x.lr.e.items.length ? STAGE[x.lr.e.stage].b : "Start", "s" + x.lr.e.stage)
+      : noteRow("Liquidation Report", "Opens once the budget request is approved"),
+    certs: x.certs.map((c) => { const n = String(c.names || "").split("\n").filter((v) => v.trim()).length; return docBtn(`data-evct="${c.id}"`, "Certificates · " + CERT_TYPES[c.type].label, plural(n, "name", "names"), n ? "Ready" : "No names", n ? "s4" : "s0"); }).join("")
+      + addBtn(`data-evctnew="${e.id}"`, "New certificate batch"),
+    mins: x.mins.length ? x.mins.map((m) => docBtn(`data-evmn="${m.id}"`, `Minutes · Meeting, ${dShort(m.date)}`, "Talks about this event", m.final ? "Final" : "Draft", m.final ? "s4" : "s0")).join("")
+      : noteRow("Minutes", "Not discussed in any minutes yet"),
+  };
+  const order = ui.lens === "secretary" && !signerRole() ? ["certs", "mins", "br", "lr"] : ["br", "lr", "certs", "mins"];
+  const empty = !x.b && !x.bp && !x.certs.length;
+  const edit = ui.evEdit === e.id
+    ? `<div class="ev-edit"><div class="field"><label for="evN">Event</label><input class="line-in" id="evN" autocomplete="off" value="${esc(e.name)}"></div>
+        <div class="two"><div class="field"><label for="evD">Date</label><input class="line-in" id="evD" type="date" value="${esc(e.date)}"></div><div class="field"><label for="evV">Venue</label><input class="line-in" id="evV" autocomplete="off" value="${esc(e.venue)}"></div></div>
+        <div class="m-foot" style="margin-top:0">${empty ? `<button class="textbtn danger" type="button" data-evdel="${e.id}">Delete event</button>` : "<span></span>"}<button class="ghost sm" type="button" data-evdone="${e.id}">Done</button></div></div>`
+    : `<div class="ev-foot"><button class="textbtn" type="button" data-evedit="${e.id}">Edit name, date or venue</button></div>`;
+  return `<ul class="ev-docs">${order.map((k) => parts[k]).join("")}</ul>${edit}`;
+}
+function renderEvents() {
+  const head = titleBlock("Events", "Every activity", `<p>Tap an event to see its documents and where each one stands, or start the ones it still needs.</p>`);
+  const list = eventList().slice().sort((a, b) => (!a.date) - (!b.date) || (b.date || "").localeCompare(a.date || "") || a.name.localeCompare(b.name));
+  const groups = [];
+  for (const e of list) { const m = dMonth(e.date), g = groups[groups.length - 1]; if (g && g.m === m) g.rows.push(e); else groups.push({ m, rows: [e] }); }
+  const add = ui.evAdding
+    ? `<section class="sheet sheet-pad ev-new"><h2>New event</h2><div class="fields"><div class="field"><label for="evNewN">Event</label><input class="line-in" id="evNewN" autocomplete="off" placeholder="e.g. Christmas Party"></div>
+        <div class="two"><div class="field"><label for="evNewD">Date</label><input class="line-in" id="evNewD" type="date"></div><div class="field"><label for="evNewV">Venue <span class="opt">(optional)</span></label><input class="line-in" id="evNewV" autocomplete="off" placeholder="e.g. EYA-CLI Laboratory"></div></div></div>
+        <div class="m-foot"><button class="textbtn" type="button" id="evNewNo">Cancel</button><button class="ghost" type="button" id="evNewGo">Add event</button></div></section>`
+    : `<section class="sheet lib-top"><div class="lib-bar"><button class="ghost sm" type="button" id="evAdd"><svg class="i"><use href="#i-plus"/></svg>New event</button></div></section>`;
+  const body = groups.map((g) => `<section class="sheet"><div class="sheet-h month"><h2>${esc(g.m)}</h2><span class="lede">${plural(g.rows.length, "event", "events")}</span></div><ul class="rows">${g.rows.map((e) => {
+    const x = eventDocs(e), open = ui.evOpen === e.id;
+    return `<li class="hrow single ev${open ? " open" : ""}"><button class="go ev-h" type="button" data-evtoggle="${e.id}" aria-expanded="${open}"><span><span class="nm">${esc(e.name)}</span><span class="mt">${esc([e.date ? dShort(e.date) : "", e.venue].filter(Boolean).join(" · ") || "No date or venue yet")}</span><span class="ts">${esc(eventSummary(e, x))}</span></span><svg class="i chev" aria-hidden="true"><use href="#i-chev"/></svg></button>${open ? eventDrop(e, x) : ""}</li>`;
+  }).join("")}</ul></section>`).join("");
+  return head + add + `<div class="lib-months">${body}</div>`;
+}
+document.addEventListener("click", (e) => {
+  const c = (s) => e.target.closest(s); if (!e.target.closest("#hub")) return;
+  const t = c("[data-evtoggle]"); if (t) { ui.evOpen = ui.evOpen === t.dataset.evtoggle ? null : t.dataset.evtoggle; ui.evEdit = null; keep(); renderHub(); document.querySelector(`[data-evtoggle="${t.dataset.evtoggle}"]`)?.focus(); return; }
+  if (c("#evAdd")) { ui.evAdding = true; renderHub(); $("#evNewN").focus(); return; }
+  if (c("#evNewNo")) { ui.evAdding = false; renderHub(); return; }
+  if (c("#evNewGo")) {
+    const n = $("#evNewN").value.trim(); if (!n) { $("#evNewN").focus(); TR.toast("Give the event a name"); return; }
+    const ev = addEvent({ name: n, date: $("#evNewD").value, venue: $("#evNewV").value });
+    ui.evAdding = false; ui.evOpen = ev.id; keep(); renderHub(); TR.toast("Event added"); return;
+  }
+  const ed = c("[data-evedit]"); if (ed) { ui.evEdit = ed.dataset.evedit; renderHub(); $("#evN").focus(); return; }
+  const dn = c("[data-evdone]"); if (dn) { ui.evEdit = null; renderHub(); return; }
+  const dl = c("[data-evdel]"); if (dl) { const was = removeEvent(dl.dataset.evdel); ui.evOpen = null; ui.evEdit = null; keep(); renderHub(); TR.toast(`Deleted “${was.e.name}”`, () => { restoreEvent(was); ui.evOpen = was.e.id; renderHub(); }); return; }
+  const ev = (k) => eventById(c(`[data-${k}]`).dataset[k.replace(/-([a-z])/g, (_, x) => x.toUpperCase())]);
+  if (c("[data-evbr]")) { openBR(c("[data-evbr]").dataset.evbr); return; }
+  if (c("[data-evbrnew]")) { const x = eventById(c("[data-evbrnew]").dataset.evbrnew); openBR(x.id, { name: x.name, date: x.date, venue: x.venue }); TR.toast("Budget request started for " + x.name); return; }
+  if (c("[data-evlr]")) { TR.BACK.hub = true; openFlow("liq", c("[data-evlr]").dataset.evlr); return; }
+  if (c("[data-evct]")) { setView("cert"); openCerts(c("[data-evct]").dataset.evct); return; }
+  if (c("[data-evctnew]")) { const x = eventById(c("[data-evctnew]").dataset.evctnew); setView("cert"); newBatch({ event: x.name, date: x.date || new Date().toISOString().slice(0, 10), evId: x.id }); return; }
+  if (c("[data-evmn]")) { setView("sec"); openMinutes(c("[data-evmn]").dataset.evmn); return; }
+});
+document.addEventListener("input", (e) => {
+  const id = ui.evEdit; if (!id || !e.target.closest(".ev-edit")) return;
+  updateEvent(id, { name: $("#evN").value, date: $("#evD").value, venue: $("#evV").value });
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.id && e.target.id.startsWith("evNew")) { e.preventDefault(); $("#evNewGo")?.click(); } });
 
 /* ---- Profile ---- */
 const SIGN = [
@@ -336,7 +427,7 @@ document.addEventListener("click", (e) => {
   if (e.target.closest("#siGo")) {
     const p = people()[signAs] || people()[0];
     setSession({ role: p[0], name: p[1] });
-    ui.tab = "home"; ui.lens = p[0] === "secretary" ? "secretary" : "treasurer";
+    ui.tab = "events"; ui.lens = p[0] === "secretary" ? "secretary" : "treasurer";
     setView("hub");
   }
 });
@@ -424,7 +515,7 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape" && apKey) {
 document.addEventListener("click", (e) => {
   if (device.dataset.view !== "flow") return;
   if (e.target.closest("#hdBadge,#statusBar,#phoneSigns")) {
-    const k = TR.area() === "liq" ? (L.req ? "lr:" + L.req.id : null) : "br:cur";
+    const k = TR.area() === "liq" ? (L.req ? "lr:" + L.req.id : null) : S.ev ? "br:" + S.ev : null;
     if (k) openPath(doc(k));
   }
 });

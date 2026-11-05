@@ -105,6 +105,11 @@ const batchTitle = (c) => `${TYPES[c.type].label} · ${c.event || "Untitled even
 
 export function openCerts(id) { DB.back = id ? "hub" : null; DB.cur = id || null; DB.step = id ? "review" : "list"; DB.at = 0; save(false); render(); root.scrollTop = 0; }
 export const showCerts = () => render();
+// start a batch from an event: the event, its date and its id come in
+export function newBatch(pre) {
+  const n = { ...blank(), ...pre }; n.reason = TYPES[n.type].reason(n.event || "[event]");
+  DB.list.unshift(n); DB.cur = n.id; DB.back = "hub"; DB.step = "details"; DB.at = 0; save(); render(); root.scrollTop = 0;
+}
 function go(step) { DB.step = step; save(false); render(); root.scrollTop = 0; $("#certMain h2")?.focus({ preventScroll: true }); }
 
 function stepDone(c, k) {
