@@ -181,3 +181,10 @@
 .ev-new .fields{margin-top:var(--s4)}
 @media (prefers-reduced-motion:reduce){ .ev .chev{transition:none} }
 .ev.hrow{display:block}
+
+/* month bands: chapter blue (#4C94D8) with white text, set large so it reads at 3:1 (WCAG large text) */
+.sheet-h.band{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s3);margin:0;padding:var(--s3) var(--s4);background:#4C94D8;color:#fff;border-radius:var(--r-paper) var(--r-paper) 0 0}
+.sheet-h.band h2{margin:0;font-size:19px;line-height:24px;font-weight:700;color:#fff}
+.sheet-h.band span{font-size:13px;line-height:18px;font-weight:600;color:#fff}
+.sheet-h.band + .rows{border-top:0}
+.rows .sub-month{padding:var(--s3) var(--s4) var(--s1);font-size:13px;line-height:18px;font-weight:700;color:#2F6FAE;background:#F1F7FD;border-bottom:1px solid var(--rule)}

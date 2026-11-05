@@ -125,9 +125,10 @@ addEventListener("hub:close", () => { setView("hub"); TR.toast("Saved. You’re 
 $("#apphead .hd-mark")?.addEventListener("click", (e) => { e.preventDefault(); setView("hub"); });
 
 /* ---------------- hub chrome: Home · Library · Profile ---------------- */
-const TABS = [["home", "Home", "i-home"], ["events", "Events", "i-cal"], ["library", "Library", "i-lib"], ["profile", "Profile", "i-user"]];
+const TABS = [["home", "Home", "i-home"], ["events", "Events", "i-cal"], ["profile", "Profile", "i-user"]];
 const signerRole = () => me().role === "president" || me().role === "adviser";
 function renderChrome() {
+  if (ui.tab === "library") ui.tab = "events"; // Library is now part of Events
   if (!TABS.some((t) => t[0] === ui.tab)) ui.tab = "home";
   const cur = (k) => (k === ui.tab ? ' aria-current="page"' : "");
   $("#hubNav").innerHTML = TABS.map(([k, l]) => `<button type="button" data-tab="${k}"${cur(k)}>${l}</button>`).join("");
@@ -152,7 +153,7 @@ function titleBlock(kicker, h1, extra = "") {
 }
 function renderHub() {
   renderChrome();
-  const T = { home: renderHome, events: renderEvents, library: renderLibrary, profile: renderProfile }[ui.tab] || renderHome;
+  const T = { home: renderHome, events: renderEvents, profile: renderProfile }[ui.tab] || renderHome;
   $("#hubMain").innerHTML = T();
 }
 
@@ -223,7 +224,7 @@ function renderHome() {
   return head + `<section class="sheet"><div class="sheet-h"><h2>Your tools</h2></div><ul class="rows">${rows}</ul></section>` + needs;
 }
 
-/* ---- Library: Recents by month (default), filters behind one button ---- */
+/* ---- filters (status and tool) used by the Events tab ---- */
 const FILTERS = [["all", "All"], ["draft", "Drafts"], ["mine", "Needs action"], ["sub", "Submitted"], ["ok", "Approved"], ["ret", "Returned"]];
 const TYPES_F = [["all", "All types"], ["br", "Budget requests"], ["lr", "Liquidation"], ["mn", "Minutes"], ["ct", "Certificates"]];
 const filtersOn = () => ui.q.trim() || ui.filter !== "all" || ui.type !== "all";
@@ -237,26 +238,19 @@ function libMatch(d) {
   return { all: true, draft: st.stage === 0 && !isReturned(st), mine: needsMe(d), sub: st.stage >= 1 && st.stage <= 3, ok: st.stage === 4, ret: isReturned(st) }[ui.filter];
 }
 const monthOf = (t) => new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(new Date(t));
-function renderLibrary() {
-  const head = titleBlock("Library", "Recents", `<p>Everything the officers worked on, newest first, by month. Tap one to open it; tap its status to see who signs.</p>`);
+// the search-and-filter bar, shared by the Events tab
+function filterBar(extra = "") {
   const tag = (k, l, grp, cur) => `<button type="button" class="tagbtn" role="radio" aria-checked="${cur === k}" data-${grp}="${k}">${l}</button>`;
   const on = filtersOn(), sum = [ui.q.trim() && `“${ui.q.trim()}”`, ui.filter !== "all" && FILTERS.find((f) => f[0] === ui.filter)[1], ui.type !== "all" && TYPES_F.find((f) => f[0] === ui.type)[1]].filter(Boolean).join(" · ");
-  const bar = `<div class="lib-bar"><button class="ghost sm" type="button" id="libF" aria-expanded="${!!ui.showF}" aria-controls="libCtl"><svg class="i"><use href="#i-search"/></svg>${on ? "Filters on" : "Search and filter"}</button>
+  const bar = `<div class="lib-bar">${extra}<button class="ghost sm" type="button" id="libF" aria-expanded="${!!ui.showF}" aria-controls="libCtl"><svg class="i"><use href="#i-search"/></svg>${on ? "Filters on" : "Search and filter"}</button>
       ${on ? `<span class="lib-sum">${esc(sum)}</span><button class="textbtn" type="button" id="libClear" style="margin:0">Clear</button>` : ""}</div>`;
   const ctl = ui.showF ? `<div class="lib-ctl" id="libCtl">
-      <div class="search"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><input class="line-in" id="libQ" type="search" autocomplete="off" placeholder="Search by event or type" aria-label="Search the library" value="${esc(ui.q)}"></div>
+      <div class="search"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><input class="line-in" id="libQ" type="search" autocomplete="off" placeholder="Search events and documents" aria-label="Search events and documents" value="${esc(ui.q)}"></div>
       <div class="tags" role="radiogroup" aria-label="Status">${FILTERS.map(([k, l]) => tag(k, l, "flt", ui.filter)).join("")}</div>
-      <div class="tags" role="radiogroup" aria-label="Type">${TYPES_F.map(([k, l]) => tag(k, l, "typ", ui.type)).join("")}</div></div>` : "";
-  return head + `<section class="sheet lib-top">${bar}${ctl}</section><div id="libRows" class="lib-months">${libRows()}</div>`;
+      <div class="tags" role="radiogroup" aria-label="Tool">${TYPES_F.map(([k, l]) => tag(k, l, "typ", ui.type)).join("")}</div></div>` : "";
+  return `<section class="sheet lib-top">${bar}${ctl}</section>`;
 }
-function libRows() {
-  const list = docs().filter(libMatch).sort((a, b) => b.at - a.at);
-  if (!list.length) return `<section class="sheet"><p class="empty">Nothing matches. Try another status or clear the search.</p></section>`;
-  const groups = [];
-  for (const d of list) { const m = monthOf(d.at), g = groups[groups.length - 1]; if (g && g.m === m) g.rows.push(d); else groups.push({ m, rows: [d] }); }
-  return groups.map((g) => `<section class="sheet"><div class="sheet-h month"><h2>${esc(g.m)}</h2><span class="lede">${plural(g.rows.length, "document", "documents")}</span></div><ul class="rows">${g.rows.map(docRow).join("")}</ul></section>`).join("");
-}
-document.addEventListener("input", (e) => { if (e.target.id === "libQ") { ui.q = e.target.value; keep(); $("#libRows").innerHTML = libRows(); } });
+document.addEventListener("input", (e) => { if (e.target.id === "libQ") { ui.q = e.target.value; keep(); $("#evList").innerHTML = eventsBody(); } });
 document.addEventListener("click", (e) => {
   if (e.target.closest("#libF")) { ui.showF = !ui.showF; keep(); renderHub(); if (ui.showF) $("#libQ")?.focus(); return; }
   if (e.target.closest("#libClear")) { ui.q = ""; ui.filter = "all"; ui.type = "all"; keep(); renderHub(); return; }
@@ -310,21 +304,46 @@ function eventDrop(e, x) {
     : `<div class="ev-foot"><button class="textbtn" type="button" data-evedit="${e.id}">Edit name, date or venue</button></div>`;
   return `<ul class="ev-docs">${order.map((k) => parts[k]).join("")}</ul>${edit}`;
 }
+// the keys of every document that belongs to an event (to filter, and to find the ones with no event)
+function eventKeys(e, x) {
+  return [x.b && "br:" + e.id, x.bp && "bp:" + x.bp.id, x.lr && "lr:" + x.lr.r.id, ...x.certs.map((c) => "ct:" + c.id), ...x.mins.map((m) => "mn:" + m.id)].filter(Boolean);
+}
+const band = (title, count) => `<div class="sheet-h month band"><h2>${esc(title)}</h2><span>${esc(count)}</span></div>`;
+function eventsBody() {
+  const all = docs(), byKey = new Map(all.map((d) => [d.key, d])), used = new Set(), on = filtersOn(), q = ui.q.trim().toLowerCase();
+  const shown = [];
+  for (const e of eventList()) {
+    const x = eventDocs(e), keys = eventKeys(e, x); keys.forEach((k) => used.add(k));
+    const ds = keys.map((k) => byKey.get(k)).filter(Boolean);
+    const nameHit = q && (e.name + " " + (e.venue || "")).toLowerCase().includes(q);
+    const ok = !on || ds.some(libMatch) || (nameHit && ui.filter === "all" && ui.type === "all");
+    if (ok) shown.push({ e, x });
+  }
+  shown.sort((a, b) => (!a.e.date) - (!b.e.date) || (b.e.date || "").localeCompare(a.e.date || "") || a.e.name.localeCompare(b.e.name));
+  const groups = [];
+  for (const it of shown) { const m = dMonth(it.e.date), g = groups[groups.length - 1]; if (g && g.m === m) g.rows.push(it); else groups.push({ m, rows: [it] }); }
+  let html = groups.map((g) => `<section class="sheet">${band(g.m, plural(g.rows.length, "event", "events"))}<ul class="rows">${g.rows.map(({ e, x }) => {
+    const open = ui.evOpen === e.id;
+    return `<li class="hrow single ev${open ? " open" : ""}"><button class="go ev-h" type="button" data-evtoggle="${e.id}" aria-expanded="${open}"><span><span class="nm">${esc(e.name)}</span><span class="mt">${esc([e.date ? dShort(e.date) : "", e.venue].filter(Boolean).join(" · ") || "No date or venue yet")}</span><span class="ts">${esc(eventSummary(e, x))}</span></span><svg class="i chev" aria-hidden="true"><use href="#i-chev"/></svg></button>${open ? eventDrop(e, x) : ""}</li>`;
+  }).join("")}</ul></section>`).join("");
+  // documents that belong to no event: newest first, under month labels
+  const other = all.filter((d) => !used.has(d.key) && (!on || libMatch(d))).sort((a, b) => b.at - a.at);
+  if (other.length) {
+    let last = "", rows = "";
+    for (const d of other) { const m = monthOf(d.at); if (m !== last) { rows += `<li class="sub-month" aria-hidden="true">${esc(m)}</li>`; last = m; } rows += docRow(d); }
+    html += `<section class="sheet">${band("Other documents", plural(other.length, "document", "documents"))}<ul class="rows">${rows}</ul></section>`;
+  }
+  return html || `<section class="sheet"><p class="empty">Nothing matches. Try another status or clear the search.</p></section>`;
+}
 function renderEvents() {
   const head = titleBlock("Events", "Every activity", `<p>Tap an event to see its documents and where each one stands, or start the ones it still needs.</p>`);
-  const list = eventList().slice().sort((a, b) => (!a.date) - (!b.date) || (b.date || "").localeCompare(a.date || "") || a.name.localeCompare(b.name));
-  const groups = [];
-  for (const e of list) { const m = dMonth(e.date), g = groups[groups.length - 1]; if (g && g.m === m) g.rows.push(e); else groups.push({ m, rows: [e] }); }
   const add = ui.evAdding
     ? `<section class="sheet sheet-pad ev-new"><h2>New event</h2><div class="fields"><div class="field"><label for="evNewN">Event</label><input class="line-in" id="evNewN" autocomplete="off" placeholder="e.g. Christmas Party"></div>
         <div class="two"><div class="field"><label for="evNewD">Date</label><input class="line-in" id="evNewD" type="date"></div><div class="field"><label for="evNewV">Venue <span class="opt">(optional)</span></label><input class="line-in" id="evNewV" autocomplete="off" placeholder="e.g. EYA-CLI Laboratory"></div></div></div>
         <div class="m-foot"><button class="textbtn" type="button" id="evNewNo">Cancel</button><button class="ghost" type="button" id="evNewGo">Add event</button></div></section>`
-    : `<section class="sheet lib-top"><div class="lib-bar"><button class="ghost sm" type="button" id="evAdd"><svg class="i"><use href="#i-plus"/></svg>New event</button></div></section>`;
-  const body = groups.map((g) => `<section class="sheet"><div class="sheet-h month"><h2>${esc(g.m)}</h2><span class="lede">${plural(g.rows.length, "event", "events")}</span></div><ul class="rows">${g.rows.map((e) => {
-    const x = eventDocs(e), open = ui.evOpen === e.id;
-    return `<li class="hrow single ev${open ? " open" : ""}"><button class="go ev-h" type="button" data-evtoggle="${e.id}" aria-expanded="${open}"><span><span class="nm">${esc(e.name)}</span><span class="mt">${esc([e.date ? dShort(e.date) : "", e.venue].filter(Boolean).join(" · ") || "No date or venue yet")}</span><span class="ts">${esc(eventSummary(e, x))}</span></span><svg class="i chev" aria-hidden="true"><use href="#i-chev"/></svg></button>${open ? eventDrop(e, x) : ""}</li>`;
-  }).join("")}</ul></section>`).join("");
-  return head + add + `<div class="lib-months">${body}</div>`;
+    : "";
+  const bar = filterBar(ui.evAdding ? "" : `<button class="ghost sm" type="button" id="evAdd"><svg class="i"><use href="#i-plus"/></svg>New event</button>`);
+  return head + bar + add + `<div class="lib-months" id="evList">${eventsBody()}</div>`;
 }
 document.addEventListener("click", (e) => {
   const c = (s) => e.target.closest(s); if (!e.target.closest("#hub")) return;
