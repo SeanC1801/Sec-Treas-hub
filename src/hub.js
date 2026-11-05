@@ -3,7 +3,7 @@
 // kept on this device until the backend exists (see docs/design/UX_MAP.md).
 import { TR } from "./prototype.js";
 import { ROLES, getSession, setSession, me } from "./session.js";
-import { minutesList, openMinutes, showMinutes } from "./minutes.js";
+import { minutesList, openMinutes, showMinutes, newMinutes } from "./minutes.js";
 import { certList, openCerts, showCerts, newBatch, TYPES as CERT_TYPES } from "./certs.js";
 import { eventList, eventById, addEvent, updateEvent, removeEvent, restoreEvent, sameEvent, mentions } from "./events.js";
 
@@ -137,7 +137,7 @@ function renderChrome() {
   const lens = (k, l) => `<button type="button" role="radio" data-lens="${k}" aria-checked="${ui.lens === k}"${ui.lens === k ? ' aria-current="page"' : ""}>${l}</button>`;
   $("#roleSwitch").innerHTML = lens("treasurer", "Treasurer") + lens("secretary", "Secretary");
   // the switch only changes Home's tools, so it shows on Home, for the officers who have tools
-  $("#roleSwitch").hidden = !(ui.tab === "home" || ui.tab === "events") || signerRole();
+  $("#roleSwitch").hidden = ui.tab !== "home" || signerRole(); // the role switch lives on Home only
 }
 document.addEventListener("click", (e) => {
   const t = e.target.closest("[data-tab]");
@@ -209,20 +209,116 @@ function toolStatus(k) {
   if (k === "certs") return plural(certList().length, "batch", "batches");
   return "";
 }
-function renderHome() {
-  const u = me(), all = docs(), mine = all.filter(needsMe);
-  const head = titleBlock(`${ROLES[u.role]} · A.Y. 2026–27`, `${hello()}, ${firstName(u.name)}`);
-  const needs = mine.length ? `<section class="sheet"><div class="sheet-h"><h2>Needs your action</h2><p class="lede">Your turn on ${mine.length === 1 ? "this one" : "these"}.</p></div><ul class="rows">${mine.map(docRow).join("")}</ul></section>` : "";
+// a coloured heading band: kind = todo | tre | sec | navy | month
+const bandK = (kind, title, right = "") => `<div class="sheet-h band ${kind}"><h2>${esc(title)}</h2>${right ? `<span>${esc(right)}</span>` : ""}</div>`;
+const lensRole = () => (signerRole() ? me().role : ui.lens);
+const roleKind = () => (lensRole() === "secretary" ? "sec" : "tre");
+
+/* the to-do list: what this role should do next, each item opens the exact spot */
+function todos() {
+  const u = me(), all = docs(), T = [];
+  const add = (verb, what, why, act, warn) => T.push({ verb, what, why, act, warn });
   if (signerRole()) {
-    const moving = all.filter((d) => !d.past && stageOf(d) >= 1 && stageOf(d) <= 3 && !needsMe(d));
-    return head + (needs || `<section class="sheet"><div class="sheet-h"><h2>Needs your action</h2><p class="lede">Nothing is waiting on you.</p></div></section>`) +
-      `<section class="sheet"><div class="sheet-h"><h2>On its way</h2><p class="lede">Submitted documents that are with someone else.</p></div>
-      ${moving.length ? `<ul class="rows">${moving.map(docRow).join("")}</ul>` : `<p class="empty">Nothing else is moving right now.</p>`}</section>`;
+    all.filter(needsMe).forEach((d) => add(u.role === "president" ? "Sign" : "Note", d.title, `${d.type} · waiting for you`, `data-path="${d.key}"`));
+    return T;
   }
-  const tools = ROLE_TOOLS[ui.lens] || ROLE_TOOLS.treasurer;
-  const rows = tools.map((k) => `<li class="hrow single tool"><button class="go" type="button" data-tool="${k}"><span><span class="nm">${TOOLS[k][0]}</span><span class="mt">${TOOLS[k][1]}</span><span class="ts">${esc(toolStatus(k))}</span></span><svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></button></li>`).join("");
-  return head + `<section class="sheet"><div class="sheet-h"><h2>Your tools</h2></div><ul class="rows">${rows}</ul></section>` + needs;
+  if (lensRole() === "treasurer") {
+    all.filter((d) => (d.kind === "br" || d.kind === "lr") && isReturned(d.st())).forEach((d) => {
+      const l = lastLog(d.st()), note = (l.note || "").replace(/^Returned:?\s*/, "");
+      add("Fix and resend", d.title, `${d.type} · returned by ${firstName(l.by)}${note ? `: “${note}”` : ""}`, `data-open="${d.key}"`, true);
+    });
+    all.filter((d) => (d.kind === "br" || d.kind === "lr") && stageOf(d) === 3).forEach((d) => add("Record the CSC’s approval", d.title, `${d.type} · with the CSC`, `data-path="${d.key}"`));
+    all.filter((d) => d.kind === "lr" && stageOf(d) === 0 && !isReturned(d.st())).forEach((d) => {
+      const e = TR.evData(d.id), past = e.r.date && new Date(e.r.date + "T23:59") < new Date();
+      add(e.items.length ? "Finish and send" : "Liquidate", d.title, e.items.length ? `Liquidation report · ${d.meta}` : `Budget approved${past ? ` · the event was ${dShort(e.r.date)}; liquidation is due the next day` : ""}`, `data-open="${d.key}"`, past && !e.items.length);
+    });
+    all.filter((d) => d.kind === "br" && stageOf(d) === 0 && !isReturned(d.st())).forEach((d) => {
+      const b = d.st(), need = b.items.filter((i) => !(Number(i.amt) > 0)).length;
+      add(b.items.length ? "Finish and send" : "Add budget lines", d.title, b.items.length ? (need ? `Budget request · ${plural(need, "line needs", "lines need")} an amount` : "Budget request · ready to send to the President") : "Budget request · no lines yet", `data-open="${d.key}"`);
+    });
+  } else {
+    minutesList().filter((m) => !m.final).forEach((m) => add("Finish minutes", `Meeting, ${dShort(m.date)}`, "Minutes · not marked final yet", `data-open="mn:${m.id}"`));
+    certList().filter((c) => !String(c.names || "").trim()).forEach((c) => add("Add names", c.event || "Untitled event", "Certificates · no names yet", `data-open="ct:${c.id}"`));
+  }
+  return T;
 }
+const todoRow = (t) => `<li class="hrow single"><button class="go todo" type="button" ${t.act}><span><span class="nm"><span class="verb${t.warn ? " warn" : ""}">${esc(t.verb)}</span> · ${esc(t.what)}</span><span class="mt">${esc(t.why)}</span></span><svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></button></li>`;
+
+/* the tools: where work starts and where in-progress work lives */
+const evPick = (attr, list, none) => list.length
+  ? `<div class="pick"><p class="lede">For which event?</p><ul class="ev-docs">${list.map((e) => `<li><button class="ev-doc" type="button" ${attr}="${e.id}"><span><span class="k">${esc(e.name)}</span><span class="s">${esc(e.date ? dShort(e.date) : "No date yet")}</span></span></button></li>`).join("")}</ul></div>`
+  : `<p class="empty">${none}</p>`;
+function toolDrop(k) {
+  const all = docs(), rows = (ds) => (ds.length ? `<ul class="rows inprog">${ds.map(docRow).join("")}</ul>` : `<p class="empty">Nothing in progress.</p>`);
+  const newEv = `<div class="ev-edit"><div class="field"><label for="tnN">Or a new event</label><input class="line-in" id="tnN" autocomplete="off" placeholder="e.g. Christmas Party"></div><div class="two"><div class="field"><label for="tnD">Date</label><input class="line-in" id="tnD" type="date"></div><div class="field"><label for="tnV">Venue <span class="opt">(optional)</span></label><input class="line-in" id="tnV" autocomplete="off"></div></div><div class="m-foot" style="margin-top:0"><span></span><button class="ghost sm" type="button" data-tnew="${k}">Start for this new event</button></div></div>`;
+  if (k === "br") {
+    const prog = all.filter((d) => d.kind === "br" && stageOf(d) < 4).sort((a, b) => b.at - a.at);
+    const free = eventList().filter((e) => { const x = eventDocs(e); return !x.b && !x.bp; });
+    return rows(prog) + (ui.pick === "br" ? evPick("data-brfor", free, "Every event already has a budget request.") + newEv : `<ul class="ev-docs">${addBtn('data-pickfor="br"', "New budget request")}</ul>`);
+  }
+  if (k === "lr") {
+    const prog = all.filter((d) => d.kind === "lr" && stageOf(d) < 4).sort((a, b) => b.at - a.at);
+    return rows(prog) + `<ul class="ev-docs">${addBtn('data-tool="lr"', "Open the semester tracker")}</ul>`;
+  }
+  if (k === "minutes") {
+    const prog = all.filter((d) => d.kind === "mn" && d.label === "Draft").sort((a, b) => b.at - a.at);
+    return rows(prog) + `<ul class="ev-docs">${addBtn('data-mnnew="1"', "New minutes")}${addBtn('data-tool="minutes"', "All meetings")}</ul>`;
+  }
+  const prog = all.filter((d) => d.kind === "ct").sort((a, b) => b.at - a.at).slice(0, 4);
+  return rows(prog) + (ui.pick === "certs" ? evPick("data-ctfor", eventList(), "No events yet.") + newEv : `<ul class="ev-docs">${addBtn('data-pickfor="certs"', "New certificate batch")}${addBtn('data-tool="certs"', "All batches")}</ul>`);
+}
+const GUIDE = {
+  treasurer: ["Open Budget Requests below and start one for the event. Send it to the President when every line has an amount.",
+    "It goes to the President, then the Adviser, then the CSC. When the CSC approves, record it here; your to-do list reminds you.",
+    "The day after the event, liquidate it: add each receipt, and the winners’ IDs if there were cash prizes.",
+    "Send the Liquidation Report the same way. Finished documents live in Events."],
+  secretary: ["After each meeting, open Minutes below: details, attendance, notes and action items. Mark them final when done.",
+    "Before an event, start its certificates from Certificates below, then paste the names.",
+    "Check each name in the preview, then print all as one PDF.",
+    "Finished minutes and certificates live in Events, under their event."],
+  president: ["Documents waiting for your signature show in your to-do list.", "Open one, check it, then mark it as signed or return it with a note.", "Events shows where every document stands."],
+  adviser: ["Documents waiting for your note show in your to-do list.", "Open one, check it, then mark it as noted or return it with a note.", "Events shows where every document stands."],
+};
+function renderHome() {
+  const u = me(), role = lensRole(), all = docs(), T = todos();
+  const head = titleBlock(`${ROLES[u.role]} · A.Y. 2026–27`, `${hello()}, ${firstName(u.name)}`, `<p>${signerRole() ? "Here’s what needs you today." : `Here’s what to do next as ${role === "secretary" ? "Secretary" : "Treasurer"}.`}</p>`);
+  const todo = `<section class="sheet">${bandK("todo", "To do", T.length ? String(T.length) : "")}${T.length ? `<ul class="rows">${(ui.todoAll ? T : T.slice(0, 4)).map(todoRow).join("")}</ul>${T.length > 4 ? `<div class="pf-foot"><span></span><button class="textbtn" type="button" id="todoAll">${ui.todoAll ? "Show fewer" : `Show all ${T.length}`}</button></div>` : ""}` : `<p class="empty">You’re all caught up.</p>`}</section>`;
+  let tools = "";
+  if (!signerRole()) {
+    const tl = ROLE_TOOLS[role] || ROLE_TOOLS.treasurer;
+    tools = `<section class="sheet">${bandK(roleKind(), "Your tools", "Start and continue work")}<ul class="rows">${tl.map((k) => {
+      const open = ui.toolOpen === k;
+      return `<li class="hrow single ev tool${open ? " open" : ""}"><button class="go ev-h" type="button" data-toolopen="${k}" aria-expanded="${open}"><span><span class="nm">${TOOLS[k][0]}</span><span class="mt">${TOOLS[k][1]}</span><span class="ts">${esc(toolStatus(k))}</span></span><svg class="i chev" aria-hidden="true"><use href="#i-chev"/></svg></button>${open ? `<div class="tool-drop">${toolDrop(k)}</div>` : ""}</li>`;
+    }).join("")}</ul></section>`;
+  } else {
+    const moving = all.filter((d) => !d.past && stageOf(d) >= 1 && stageOf(d) <= 3 && !needsMe(d));
+    tools = `<section class="sheet">${bandK("tre", "On its way", plural(moving.length, "document", "documents"))}${moving.length ? `<ul class="rows">${moving.map(docRow).join("")}</ul>` : `<p class="empty">Nothing else is moving right now.</p>`}</section>`;
+  }
+  const now = new Date(), soon = eventList().filter((e) => e.date && new Date(e.date + "T23:59") >= now && new Date(e.date + "T00:00") - now < 31 * 864e5).sort((a, b) => a.date.localeCompare(b.date));
+  const coming = `<section class="sheet">${bandK("month", "Coming up", "Next 30 days")}${soon.length ? `<ul class="rows">${soon.map((e) => `<li class="hrow single"><button class="go" type="button" data-goevent="${e.id}"><span><span class="nm">${esc(e.name)}</span><span class="mt">${esc(dShort(e.date))}${e.venue ? " · " + esc(e.venue) : ""}</span><span class="ts">${esc(eventSummary(e, eventDocs(e)))}</span></span><svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></button></li>`).join("")}</ul>` : `<p class="empty">No events in the next 30 days.</p>`}</section>`;
+  const gk = signerRole() ? u.role : role, off = (ui.guideOff || {})[gk];
+  const guide = off ? `<div class="guide-show"><button class="textbtn" type="button" data-guide="${gk}">Show how the hub works for you</button></div>`
+    : `<section class="sheet">${bandK(signerRole() ? "navy" : roleKind(), `Your role in ${GUIDE[gk].length} steps`)}<ol class="guide">${GUIDE[gk].map((g) => `<li>${esc(g)}</li>`).join("")}</ol><div class="pf-foot"><span></span><button class="textbtn" type="button" data-guide="${gk}">Hide the guide</button></div></section>`;
+  return head + todo + tools + coming + guide;
+}
+document.addEventListener("click", (e) => {
+  const c = (s) => e.target.closest(s); if (!e.target.closest("#hub")) return;
+  const to = c("[data-toolopen]"); if (to) { ui.toolOpen = ui.toolOpen === to.dataset.toolopen ? null : to.dataset.toolopen; ui.pick = null; keep(); renderHub(); document.querySelector(`[data-toolopen="${to.dataset.toolopen}"]`)?.focus(); return; }
+  const pf = c("[data-pickfor]"); if (pf) { ui.pick = pf.dataset.pickfor; renderHub(); return; }
+  const bf = c("[data-brfor]"); if (bf) { const x = eventById(bf.dataset.brfor); ui.pick = null; openBR(x.id, { name: x.name, date: x.date, venue: x.venue }); return; }
+  const cf = c("[data-ctfor]"); if (cf) { const x = eventById(cf.dataset.ctfor); ui.pick = null; setView("cert"); newBatch({ event: x.name, date: x.date || new Date().toISOString().slice(0, 10), evId: x.id }); return; }
+  const tn = c("[data-tnew]"); if (tn) {
+    const n = $("#tnN").value.trim(); if (!n) { $("#tnN").focus(); TR.toast("Give the new event a name"); return; }
+    const x = addEvent({ name: n, date: $("#tnD").value, venue: $("#tnV").value }); ui.pick = null;
+    if (tn.dataset.tnew === "br") openBR(x.id, { name: x.name, date: x.date, venue: x.venue });
+    else { setView("cert"); newBatch({ event: x.name, date: x.date || new Date().toISOString().slice(0, 10), evId: x.id }); }
+    return;
+  }
+  if (c("#todoAll")) { ui.todoAll = !ui.todoAll; keep(); renderHub(); return; }
+  if (c("[data-mnnew]")) { setView("sec"); newMinutes(true); return; }
+  const ge = c("[data-goevent]"); if (ge) { ui.tab = "events"; ui.evOpen = ge.dataset.goevent; keep(); renderHub(); $("#hub").scrollTop = 0; return; }
+  const gd = c("[data-guide]"); if (gd) { ui.guideOff = { ...(ui.guideOff || {}), [gd.dataset.guide]: !(ui.guideOff || {})[gd.dataset.guide] }; keep(); renderHub(); }
+});
 
 /* ---- filters (status and tool) used by the Events tab ---- */
 const FILTERS = [["all", "All"], ["draft", "Drafts"], ["mine", "Needs action"], ["sub", "Submitted"], ["ok", "Approved"], ["ret", "Returned"]];
@@ -287,11 +383,11 @@ function eventDrop(e, x) {
   const parts = {
     br: x.b ? docBtn(`data-evbr="${e.id}"`, "Budget Request", [x.b.d.date ? dShort(x.b.d.date) : "No date yet", x.b.items.length ? peso(x.b.items.reduce((a, i) => a + (Number(i.amt) || 0), 0)) : "No lines yet"].join(" · "), brLabel(x.b), isReturned(x.b) ? "ret" : "s" + x.b.stage)
       : x.bp ? docBtn(`data-path="bp:${x.bp.id}"`, "Budget Request", `Approved${x.bp.approved ? " " + x.bp.approved : ""} · ${peso(TR.reqTot(x.bp))}`, "Approved", "s4")
-      : addBtn(`data-evbrnew="${e.id}"`, "Start budget request"),
+      : noteRow("Budget Request", "Not started · start it from Budget Requests on Home"),
     lr: x.lr ? docBtn(`data-evlr="${e.id}"`, "Liquidation Report", x.lr.e.items.length ? `${peso(x.lr.e.items.reduce((a, b) => a + TR.lTot(b), 0))} of ${peso(TR.evAllot(x.lr.r))}` : `Not started · ${peso(TR.evAllot(x.lr.r))} allotted`, x.lr.e.items.length ? STAGE[x.lr.e.stage].b : "Start", "s" + x.lr.e.stage)
       : noteRow("Liquidation Report", "Opens once the budget request is approved"),
     certs: x.certs.map((c) => { const n = String(c.names || "").split("\n").filter((v) => v.trim()).length; return docBtn(`data-evct="${c.id}"`, "Certificates · " + CERT_TYPES[c.type].label, plural(n, "name", "names"), n ? "Ready" : "No names", n ? "s4" : "s0"); }).join("")
-      + addBtn(`data-evctnew="${e.id}"`, "New certificate batch"),
+      + (x.certs.length ? "" : noteRow("Certificates", "None yet · start them from Certificates on Home")),
     mins: x.mins.length ? x.mins.map((m) => docBtn(`data-evmn="${m.id}"`, `Minutes · Meeting, ${dShort(m.date)}`, "Talks about this event", m.final ? "Final" : "Draft", m.final ? "s4" : "s0")).join("")
       : noteRow("Minutes", "Not discussed in any minutes yet"),
   };
@@ -331,7 +427,7 @@ function eventsBody() {
   if (other.length) {
     let last = "", rows = "";
     for (const d of other) { const m = monthOf(d.at); if (m !== last) { rows += `<li class="sub-month" aria-hidden="true">${esc(m)}</li>`; last = m; } rows += docRow(d); }
-    html += `<section class="sheet">${band("Other documents", plural(other.length, "document", "documents"))}<ul class="rows">${rows}</ul></section>`;
+    html += `<section class="sheet">${bandK("navy", "Other documents", plural(other.length, "document", "documents"))}<ul class="rows">${rows}</ul></section>`;
   }
   return html || `<section class="sheet"><p class="empty">Nothing matches. Try another status or clear the search.</p></section>`;
 }
@@ -386,11 +482,11 @@ const SIGN = [
 function renderProfile() {
   const u = me();
   const head = titleBlock("AUF-ACM Student Chapter", "Profile", `<p>Your account, the signatories and the officer list.</p>`);
-  const you = `<section class="sheet"><div class="sheet-h"><h2>You</h2></div><div class="pf-me"><div><div class="nm">${esc(u.name)}</div><div class="mt">${ROLES[u.role]} · Signed in with your @auf.edu.ph Google account</div></div>
+  const you = `<section class="sheet">${bandK("navy", "You")}<div class="pf-me"><div><div class="nm">${esc(u.name)}</div><div class="mt">${ROLES[u.role]} · Signed in with your @auf.edu.ph Google account</div></div>
     <button class="ghost" type="button" id="signOut">Sign out</button></div></section>`;
-  const sig = `<section class="sheet"><div class="sheet-h"><h2>Signatories</h2><p class="lede">Each document prints the Treasurer or Secretary who prepared it. The others print on every Budget Request and Liquidation report.</p></div>
+  const sig = `<section class="sheet">${bandK("navy", "Signatories")}<div class="sheet-h"><p class="lede">Each document prints the Treasurer or Secretary who prepared it. The others print on every Budget Request and Liquidation report.</p></div>
     <div class="pf-grid">${SIGN.map(([k, l, g]) => `<div class="field"><label for="sg-${k}">${l}</label><input class="line-in" id="sg-${k}" data-sign="${k}" autocomplete="off" value="${esc(g())}"></div>`).join("")}</div></section>`;
-  const offs = `<section class="sheet"><div class="sheet-h"><h2>Officers</h2><p class="lede">These print in the letterhead footer of the Budget Request and Liquidation report.</p></div>
+  const offs = `<section class="sheet">${bandK("navy", "Officers")}<div class="sheet-h"><p class="lede">These print in the letterhead footer of the Budget Request and Liquidation report.</p></div>
     <div class="off-head" aria-hidden="true"><span>Name</span><span>Position</span><span class="sec">Section</span><span></span></div>
     <div id="offRows">${ORG.officers.map(offRow).join("")}</div>
     <div class="pf-foot"><button class="textbtn" type="button" id="offAdd">+ Add an officer</button><button class="textbtn danger" type="button" id="orgReset">Restore the chapter’s defaults</button></div>

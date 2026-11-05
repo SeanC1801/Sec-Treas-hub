@@ -188,3 +188,22 @@
 .sheet-h.band span{font-size:13px;line-height:18px;font-weight:600;color:#fff}
 .sheet-h.band + .rows{border-top:0}
 .rows .sub-month{padding:var(--s3) var(--s4) var(--s1);font-size:13px;line-height:18px;font-weight:700;color:#2F6FAE;background:#F1F7FD;border-bottom:1px solid var(--rule)}
+
+/* heading bands by kind (white text, 19 px bold): to do = amber, Treasurer = chapter blue,
+   Secretary = teal, account and records = navy; months stay chapter blue */
+.sheet-h.band.todo{background:#B5651D}
+.sheet-h.band.tre,.sheet-h.band.month{background:#4C94D8}
+.sheet-h.band.sec{background:#1F7A75}
+.sheet-h.band.navy{background:#0B2A4A}
+.sheet-h.band + .sheet-h{padding-top:var(--s3)}
+
+/* Home */
+.go.todo .verb{color:var(--action)}
+.go.todo .verb.warn{color:var(--sun)}
+.tool-drop{padding:0 0 var(--s3)}
+.tool-drop .rows.inprog{margin:0 var(--s4) var(--s2) var(--s6);border:1px solid var(--rule);border-radius:var(--r-ctl);background:#fff;overflow:hidden}
+.tool-drop .empty{padding:var(--s2) var(--s4) var(--s2) var(--s6)}
+.tool-drop .pick .lede{padding:var(--s2) var(--s4) 0 var(--s6);margin:0;font-size:13px;color:var(--ink-2)}
+.guide{margin:0;padding:var(--s4) var(--s5) 0 var(--s7);display:grid;gap:var(--s3);font-size:14px;line-height:20px}
+.guide li::marker{font-weight:700;color:var(--ink-2)}
+.guide-show{padding:var(--s2) var(--s2) var(--s5)}

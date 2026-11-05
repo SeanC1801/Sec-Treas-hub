@@ -134,7 +134,8 @@ export function openMinutes(id) {
   DB.back = id ? "hub" : null; DB.cur = id || null; DB.step = id ? ((DB.list.find((x) => x.id === id) || {}).final ? "review" : "details") : "list"; save(false);
   render(); root.scrollTop = 0;
 }
-export function newMinutes() {
+export function newMinutes(fromHub) {
+  DB.back = fromHub ? "hub" : null;
   const m = blank(); DB.list.unshift(m); DB.cur = m.id; DB.step = "details"; save();
   render(); root.scrollTop = 0;
 }
