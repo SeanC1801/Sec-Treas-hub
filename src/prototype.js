@@ -467,6 +467,8 @@ function doPrint(){const liq=AREA==="liq";
   try{window.print();}catch(_){}
   if(framed)toast("This preview can’t open the print dialog. Print works in the deployed app.");}
 function submit(){const liq=AREA==="liq";if(liq&&!L.req){go("review");return;}
+  if(liq&&!L.items.length){toast("Add at least one receipt first");go("items");return;}
+  if(liq&&L.req.provisional){toast("You can send this once its budget request is approved. Your draft is saved");return;}
   const need=liq?L.items.filter(i=>!lp(i)):S.items.filter(i=>!priced(i));
   if(need.length){$("#needBanner").hidden=false;toast(liq?"Add the missing price first":"Add the missing amount first");$("#needFix").focus();return;}
   const now=new Date();D().submitted=now;D().stage=1;logStage(D(),1);
@@ -562,7 +564,7 @@ function evData(id){const r=REQS.find(x=>x.id===id);
   if(L.req&&L.req.id===id)return{r,items:L.items,stage:L.stage};
   if(LRS[id])return{r,items:LRS[id].items,stage:LRS[id].stage};
   return{r,items:buildFromTrack(r),stage:0};}
-const evAllot=r=>r.ok?reqTot(r):null;
+const evAllot=r=>r.ok&&!r.provisional?reqTot(r):null; /* a draft started before approval has no allotted budget yet */
 const rcBlocks=items=>{const B=[];items.forEach(i=>{const k=[i.g,i.inv,i.ref,i.store].join("|"),b=B[B.length-1];if(b&&b.k===k)b.rows.push(i);else B.push({k,rows:[i]});});return B;};
 const LR_LABEL=["LR draft","LR with the President","LR with the Adviser","LR with the CSC","LR approved"];
 function trkRow(id){const{r,items,stage}=evData(id),A=evAllot(r),T=items.reduce((a,b)=>a+lTot(b),0),open=L.trk===id;
@@ -603,8 +605,8 @@ function previewEvent(id){const prev=L.req&&L.req.id;let html;
 /* ================= liquidation: request picker ================= */
 function renderReqs(){$("#reqList").innerHTML=REQS.map(r=>{const on=!!L.req&&L.req.id===r.id,dis=!r.ok;
   return `<button class="reqrow" type="button" role="radio" aria-checked="${on}"${dis?' aria-disabled="true"':""} data-req="${r.id}"><span class="rd" aria-hidden="true"></span>
-    <span><span class="nm">${esc(r.name)}</span><span class="mt">${[r.date?dShort(r.date):"",r.venue?esc(r.venue):"",r.ok?"Allotted "+peso(reqTot(r)):""].filter(Boolean).join(" · ")}</span>${dis?`<span class="why">${esc(r.why)}</span>`:""}</span>
-    <span class="st">${on?"Selected":r.ok?(r.approved?"Approved "+r.approved:"Approved"):"Not yet"}</span></button>`;}).join("");}
+    <span><span class="nm">${esc(r.name)}</span><span class="mt">${[r.date?dShort(r.date):"",r.venue?esc(r.venue):"",r.provisional?"Draft before approval":r.ok?"Allotted "+peso(reqTot(r)):""].filter(Boolean).join(" · ")}</span>${dis?`<span class="why">${esc(r.why)}</span>`:""}</span>
+    <span class="st">${on?"Selected":r.provisional?"Not approved yet":r.ok?(r.approved?"Approved "+r.approved:"Approved"):"Not yet"}</span></button>`;}).join("");}
 $("#reqList").addEventListener("click",e=>{const b=e.target.closest("[data-req]");if(!b)return;const r=REQS.find(x=>x.id===b.dataset.req);
   if(!r.ok){toast(r.why);return;}
   if(L.req&&L.req.id===r.id)return;
@@ -645,7 +647,7 @@ function lRowHTML(it,inked){
 function renderLedgerL(inkedId){
   const G=lGroups();$("#lempty").hidden=!!L.req;
   $("#lgroups").innerHTML=G.map(g=>{const a=gAct(g),pen=gPen(g),df=g.allot-a;
-    const head=`<div class="lrow gname" role="presentation"><span class="c-part">${esc(g.name)}</span><span class="c-qty"></span><span class="c-cost"></span><span class="c-amt"><small>Allotted</small>${g.extra?"—":nf.format(g.allot)}</span></div>`;
+    const head=`<div class="lrow gname" role="presentation"><span class="c-part">${esc(g.name)}</span><span class="c-qty"></span><span class="c-cost"></span><span class="c-amt"><small>${L.req&&L.req.provisional?"Not approved yet":"Allotted"}</small>${g.extra||(L.req&&L.req.provisional&&!g.allot)?"—":nf.format(g.allot)}</span></div>`;
     const body=g.rows.length?g.rows.map(it=>lRowHTML(it,it.id===inkedId)).join(""):`<p class="gempty">No receipt yet. Write one above and charge it to this item.</p>`;
     const act=`<div class="lrow sub"><span class="c-part">Actual expense</span><span class="c-qty"></span><span class="c-cost"></span><span class="c-amt"><span data-gact="${g.id}">${nf.format(a)}</span></span></div>`;
     const diff=`<div class="lrow diff${!pen&&df<0?" def":""}" data-gd="${g.id}"><span class="c-part">Excess (Deficit)</span><span class="c-qty"></span><span class="c-cost"></span><span class="c-amt"><span data-gdiff="${g.id}">${pen?'<span class="need">pending</span>':exc(df)}</span></span></div>`;
@@ -819,10 +821,23 @@ function openBR(ev,pre){if(S.ev===ev)return;
 const brState=ev=>S.ev===ev?S:(BRS[ev]||null);
 const brList=()=>[...(S.ev?[S.ev]:[]),...Object.keys(BRS)];
 /* an approved budget request becomes a request you can liquidate */
-function syncApproved(){for(const ev of brList()){const st=brState(ev);if(!st||st.stage!==4||REQS.some(r=>r.id===ev))continue;
+function syncApproved(){for(const ev of brList()){const st=brState(ev);if(!st||st.stage!==4)continue;
+  const ex=REQS.find(r=>r.id===ev);if(ex&&!ex.provisional)continue;
   const at=(st.log||[]).filter(x=>x.to===4).pop();
+  if(ex)REQS.splice(REQS.indexOf(ex),1); /* the early draft becomes a real, approved request; its receipts stay */
   REQS.push({id:ev,name:st.d.name||"Untitled event",short:st.d.name,date:st.d.date,venue:st.d.venue,fund:fundLabel(st.d),ok:true,fromBR:true,
     approved:at?new Intl.DateTimeFormat("en-PH",{month:"short",day:"numeric"}).format(new Date(at.at)):"",items:st.items.map(i=>[i.cat,i.note||"",amt(i)])});}}
+
+/* drafts in any order: a liquidation can be started before its budget is approved.
+   Its categories come from the budget request draft if there is one; it can't be sent until approval. */
+function ensureReq(ev,pre={}){let r=REQS.find(x=>x.id===ev);if(r&&r.ok)return r;
+  const b=brState(ev),old=r;
+  r={id:ev,name:pre.name||(b&&b.d.name)||"Untitled event",short:pre.name||(b&&b.d.name)||"",date:pre.date||"",venue:pre.venue||"",fund:"",ok:true,provisional:true,
+    items:b&&b.items.length?b.items.map(i=>[i.cat,i.note||"",amt(i)]):[["All expenses","",0]]};
+  if(old){r.name=old.name;r.short=old.short||old.name;r.date=old.date||r.date;r.venue=old.venue||r.venue;REQS.splice(REQS.indexOf(old),1,r);} /* a tracker event with no approved budget yet */
+  else REQS.push(r);
+  if(LRS[ev]&&!LRS[ev].items.length)delete LRS[ev]; /* start the draft clean */
+  persist();return r;}
 
 /* where × goes: a report opened from the hub closes back to the hub, not the tracker */
 const BACK={hub:false};
@@ -841,13 +856,14 @@ function persist(){if(!BOOTED)return;
   const lrs={...LRS};if(L.req)lrs[L.req.id]=snapL();
   const data={v:1,at:Date.now(),area:AREA,
     S:{ev:S.ev||null,items:S.items,uid:S.uid,step:S.step,stage:S.stage,submitted:S.submitted,d:S.d,log:S.log||[],preparedBy:S.preparedBy||null,updated:S.updated||null},
-    BRS:{...BRS},L:{step:L.step,req:L.req&&L.req.id},LRS:lrs};
+    BRS:{...BRS},PROV:REQS.filter(r=>r.provisional),L:{step:L.step,req:L.req&&L.req.id},LRS:lrs};
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(data));}catch(e){}}
 function loadSaved(){try{const d=JSON.parse(localStorage.getItem(SAVE_KEY)||"null");return d&&d.v===1?d:null;}catch(e){return null;}}
 function wipeSaved(){try{localStorage.removeItem(SAVE_KEY);}catch(e){}}
 const toDate=v=>v?new Date(v):null;
 function restore(d){
   for(const k in BRS)delete BRS[k];Object.assign(BRS,d.BRS||{});
+  for(const r of d.PROV||[]){const i=REQS.findIndex(x=>x.id===r.id);if(i<0)REQS.push(r);else if(!REQS[i].ok)REQS.splice(i,1,r);}
   if(!d.S.ev)d.S.ev="hack";
   syncApproved();
   Object.assign(S,{mode:"filled",open:null,offline:!navigator.onLine,...d.S,submitted:toDate(d.S.submitted)});S.shown=total();syncDetails();renderLedger();
@@ -902,5 +918,5 @@ BOOTED=true;persist();
 if(qs.get("type")){(AREA==="liq"?$("#lqa"):$("#qa")).value=qs.get("type");(AREA==="liq"?renderReadsL:renderReads)();}
 
 /* the hub shell (src/hub.js) drives the flows through this */
-export const TR={BRS,openBR,brState,brList,syncApproved,BACK,prep,S,L,LRS,REQS,ORG,STAGE,evData,evAllot,reqTot,lTot,total,go,setArea,pickReq,openEvent,snapL,saved,toast,logStage,setStamp,
+export const TR={ensureReq,BRS,openBR,brState,brList,syncApproved,BACK,prep,S,L,LRS,REQS,ORG,STAGE,evData,evAllot,reqTot,lTot,total,go,setArea,pickReq,openEvent,snapL,saved,toast,logStage,setStamp,
   area:()=>AREA,doc:()=>D(),stampFmt};

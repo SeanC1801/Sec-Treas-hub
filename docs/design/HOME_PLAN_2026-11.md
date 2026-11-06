@@ -183,3 +183,19 @@ Phone, top to bottom (desktop puts 1 in the left rail):
 Plain ledger headings, with colour only for meaning (overdue sun, done leaf, needs-you cyan). Plain English copy. No money slip, no "Next up" slip, no colour bands, no permanent role guide. Testing happens after building, from feedback on the live link.
 
 **Needs a small addition to Events/Budget Request:** a "Budget due" date field per event, set by the Treasurer (D2).
+
+---
+
+## 10. Addendum — monday.com references (agreed 2026-11-06)
+
+Ideas taken from monday.com's board and dashboard screenshots, kept as structure only (their saturated status colours stay out):
+
+| # | Idea | Decision | Our version |
+|---|---|---|---|
+| M1 | Status bar under each group | ✅ Take | A thin bar under each To do group and each Events row: the share of documents not started (pencil) / in progress (ink) / waiting (cyan) / done (leaf). It has a text equivalent for screen readers. |
+| M2 | Table columns (Task · Owner · Status · Due) | ❌ Leave | Rows stay stacked on every screen |
+| M3 | Collapsible groups, "+ Add" at the end | ✅ Take | Each To do group (Overdue, Today, This week, Later, No due date, Waiting on others) folds away, remembered per device. "+ Create New" sits at the end of the list. |
+| M4 | Count tiles | ✅ Take, as filters only | A row of counts on Home (All · Drafts · Waiting · Returned · Done today). Tapping one filters the To do list; tapping again clears it. No big decorative numbers. |
+| M5 | "Search for anything" | ✅ Take | Search in the sidebar (⌘K / Ctrl K on desktop), across events and documents, opening the result directly |
+| M6 | "Knowledge files" | ✅ Take | **Templates and guides** at the bottom of the sidebar: the letterhead and certificate background (download), "How the hub works" for your role (moved from Profile), and the chapter's deadline rules (liquidation the day after the event; budget deadlines set by the Treasurer) |
+| — | AI assistant box, "Tasks by owner" chart | ❌ Leave | Not needed for four officers |
