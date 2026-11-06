@@ -127,29 +127,52 @@ $("#apphead .hd-mark")?.addEventListener("click", (e) => { e.preventDefault(); s
 /* ---------------- hub chrome: Home · Library · Profile ---------------- */
 const TABS = [["home", "Home", "i-home"], ["events", "Events", "i-cal"], ["profile", "Profile", "i-user"]];
 const signerRole = () => me().role === "president" || me().role === "adviser";
+/* the sidebar: brand, the three tabs, the role's two start buttons, and you */
 function renderChrome() {
   if (ui.tab === "library") ui.tab = "events"; // Library is now part of Events
   if (!TABS.some((t) => t[0] === ui.tab)) ui.tab = "home";
+  const u = me(), role = lensRole();
   const cur = (k) => (k === ui.tab ? ' aria-current="page"' : "");
-  $("#hubNav").innerHTML = TABS.map(([k, l]) => `<button type="button" data-tab="${k}"${cur(k)}>${l}</button>`).join("");
-  $("#tabbar").innerHTML = TABS.map(([k, l, i]) => `<button type="button" data-tab="${k}"${cur(k)}><svg class="i" aria-hidden="true"><use href="#${i}"/></svg>${l}</button>`).join("");
-  $("#hubTitle").textContent = TABS.find((t) => t[0] === ui.tab)[1];
-  const lens = (k, l) => `<button type="button" role="radio" data-lens="${k}" aria-checked="${ui.lens === k}"${ui.lens === k ? ' aria-current="page"' : ""}>${l}</button>`;
-  $("#roleSwitch").innerHTML = lens("treasurer", "Treasurer") + lens("secretary", "Secretary");
-  // the switch only changes Home's tools, so it shows on Home, for the officers who have tools
-  $("#roleSwitch").hidden = ui.tab !== "home" || signerRole(); // the role switch lives on Home only
+  const START = role === "secretary"
+    ? { key: ["data-sidestart=\"minutes\"", "New minutes"], ghost: ["data-sidestart=\"certs\"", "New certificate batch"], links: [["minutes", "All meetings"], ["certs", "All certificate batches"]] }
+    : { key: ["data-sidestart=\"br\"", "New budget request"], ghost: ["data-sidestart=\"lr\"", "Liquidate an event"], links: [["lr", "Semester tracker"]] };
+  const start = signerRole() ? "" : `<div class="side-start"><div class="side-k">Start something</div>
+      <button class="key" type="button" ${START.key[0]}><svg class="i"><use href="#i-plus"/></svg>${START.key[1]}</button>
+      <button class="ghost" type="button" ${START.ghost[0]}>${START.ghost[1]}</button>
+      <div class="side-links">${START.links.map(([k, l]) => `<button class="textbtn" type="button" data-sidetool="${k}">${l}</button>`).join("")}</div></div>`;
+  $("#side").innerHTML = `<div class="side-brand">${LOGOS}<span class="wm">sectreas hub</span></div>
+    <nav class="side-nav" aria-label="Hub">${TABS.map(([k, l, i]) => `<button type="button" data-tab="${k}"${cur(k)}><svg class="i" aria-hidden="true"><use href="#${i}"/></svg>${l}</button>`).join("")}</nav>
+    ${start}
+    <div class="side-foot"><div class="me"><b>${esc(u.name)}</b><span>${esc(ROLES[u.role])}</span></div><button class="icon-btn" type="button" id="sideOut" aria-label="Sign out"><svg class="i"><use href="#i-out"/></svg></button></div>`;
 }
+// phones: the menu button opens the sidebar as a drawer
+let sideFrom = null;
+function openSide() { sideFrom = document.activeElement; $("#side").classList.add("open"); $("#sideScrim").hidden = false; $("#menuBtn").setAttribute("aria-expanded", "true"); $("#side [aria-current]")?.focus(); }
+function closeSide(focusBack = true) { if (!$("#side").classList.contains("open")) return; $("#side").classList.remove("open"); $("#sideScrim").hidden = true; $("#menuBtn").setAttribute("aria-expanded", "false"); if (focusBack) sideFrom?.focus?.(); }
+$("#menuBtn").addEventListener("click", () => ($("#side").classList.contains("open") ? closeSide() : openSide()));
+$("#sideScrim").addEventListener("click", () => closeSide());
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("#side").classList.contains("open")) closeSide(); });
+$("#side").addEventListener("click", (e) => {
+  const c = (s) => e.target.closest(s);
+  const t = c("[data-tab]"); if (t) { ui.tab = t.dataset.tab; ui.pick = null; keep(); closeSide(false); renderHub(); $("#hub").scrollTop = 0; $("#hubMain h1")?.focus?.(); return; }
+  const st = c("[data-sidestart]"); if (st) {
+    closeSide(false); markSetup("started");
+    const k = st.dataset.sidestart;
+    if (k === "minutes") { setView("sec"); newMinutes(true); return; }
+    if (k === "lr") { openTool("lr"); return; }
+    ui.tab = "home"; ui.pick = k; keep(); renderHub(); $("#hub").scrollTop = 0; $(".start-pick button, .start-pick input")?.focus(); return;
+  }
+  const tl = c("[data-sidetool]"); if (tl) { closeSide(false); openTool(tl.dataset.sidetool); return; }
+  if (c("#sideOut")) { closeSide(false); setSession(null); TR.toast("Signed out"); setView("signin"); }
+});
 document.addEventListener("click", (e) => {
-  const t = e.target.closest("[data-tab]");
-  if (t && (t.closest("#hub") || t.closest("#tabbar"))) { e.preventDefault(); ui.tab = t.dataset.tab; keep(); renderHub(); $("#hub").scrollTop = 0; return; }
+  const t = e.target.closest("#hub [data-tab]"); if (t) { ui.tab = t.dataset.tab; keep(); renderHub(); $("#hub").scrollTop = 0; return; }
   const l = e.target.closest("[data-lens]");
   if (l) { ui.lens = l.dataset.lens; keep(); renderHub(); }
 });
 
 function titleBlock(kicker, h1, extra = "") {
-  // phone: at the top of the page; desktop: in the rail
-  $("#hubRail").innerHTML = `<div class="kicker">${esc(kicker)}</div><h1>${esc(h1)}</h1>${extra}`;
-  return `<div class="hub-title">${ui.tab === "home" ? LOGOS : ""}<div class="kicker">${esc(kicker)}</div><h1>${esc(h1)}</h1>${extra}</div>`;
+  return `<div class="hub-title"><div class="kicker">${esc(kicker)}</div><h1 tabindex="-1">${esc(h1)}</h1>${extra}</div>`;
 }
 function renderHub() {
   renderChrome();
@@ -330,7 +353,9 @@ const ledgerH = (title, count, cls = "") => `<div class="hl${cls ? " " + cls : "
 function renderHome() {
   const u = me(), role = lensRole(), now = new Date();
   const dateLine = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(now) + " · " + semester(now);
-  const head = titleBlock(dateLine, firstName(u.name), `<p class="who">${esc(ROLES[u.role])}${!signerRole() && role !== u.role ? ` · viewing as ${role === "secretary" ? "Secretary" : "Treasurer"}` : ""}</p>`);
+  const lens = (k, l) => `<button type="button" role="radio" data-lens="${k}" aria-checked="${role === k}"${role === k ? ' aria-current="page"' : ""}>${l}</button>`;
+  const sw = signerRole() ? "" : `<div class="areas home-role" role="radiogroup" aria-label="Show work for">${lens("treasurer", "Treasurer")}${lens("secretary", "Secretary")}</div>`;
+  const head = titleBlock(dateLine, firstName(u.name), `<div class="who-row"><p class="who">${esc(ROLES[u.role])}</p>${sw}</div>`);
   // To do
   const { T, W } = todos(), D = doneToday(), stamped = new Set(ui.stamped || []);
   let rows = "";
@@ -347,21 +372,14 @@ function renderHome() {
   // Since you were last here
   const S2 = sinceLast();
   const since = S2.length ? `<section class="sheet home-block">${ledgerH("Since you were last here")}<ul class="rows since">${S2.map((x) => `<li><span class="nm">${esc(x.text)}</span><span class="mt">${esc(when(x.at))}</span></li>`).join("")}</ul></section>` : "";
-  // Start something
-  let start = "";
-  if (!signerRole()) {
-    const B = role === "secretary"
-      ? [["data-mnnew=\"1\"", "New minutes"], ["data-pickfor=\"certs\"", "New certificate batch"]]
-      : [["data-pickfor=\"br\"", "New budget request"], ["data-tool=\"lr\"", "Liquidate an event"]];
-    const pick = ui.pick === "br" ? evPick("data-brfor", eventList().filter((e) => { const x = eventDocs(e); return !x.b && !x.bp; }), "Every event already has a budget request.") + newEvForm("br")
-      : ui.pick === "certs" ? evPick("data-ctfor", eventList(), "No events yet.") + newEvForm("certs") : "";
-    const more = role === "secretary" ? `<button class="textbtn" type="button" data-tool="minutes">All meetings</button><button class="textbtn" type="button" data-tool="certs">All certificate batches</button>` : `<button class="textbtn" type="button" data-tool="lr">Semester tracker</button>`;
-    start = `<section class="sheet home-block">${ledgerH("Start something")}<div class="start-row">${B.map(([a, l]) => `<button class="ghost" type="button" ${a}${ui.pick && a.includes(ui.pick) ? ' aria-expanded="true"' : ""}><svg class="i"><use href="#i-plus"/></svg>${l}</button>`).join("")}</div>${pick ? `<div class="start-pick">${pick}</div>` : ""}<div class="start-more">${more}</div></section>`;
-  }
+  // Start something: chosen from the sidebar; the event picker opens here, at the top
+  const pick = ui.pick === "br" ? [`Start a budget request`, evPick("data-brfor", eventList().filter((e) => { const x = eventDocs(e); return !x.b && !x.bp; }), "Every event already has a budget request.") + newEvForm("br")]
+    : ui.pick === "certs" ? [`Start a certificate batch`, evPick("data-ctfor", eventList(), "No events yet.") + newEvForm("certs")] : null;
+  const start = pick ? `<section class="sheet home-block start-sheet">${ledgerH(pick[0])}<div class="start-pick">${pick[1]}</div></section>` : "";
   // Get set up (first run only)
   const su = setupState();
   const setup = su.skipped || su.done === su.steps.length ? "" : `<section class="sheet home-block">${ledgerH("Get set up", `${su.done} of ${su.steps.length}`)}<ul class="setup">${su.steps.map(([l, ok]) => `<li class="${ok ? "ok" : ""}"><span class="box" aria-hidden="true">${ok ? "✓" : ""}</span><span>${esc(l)}</span><span class="sr">${ok ? "done" : "not done"}</span></li>`).join("")}</ul><div class="pf-foot"><span></span><button class="textbtn" type="button" id="setupSkip">Skip</button></div></section>`;
-  return head + setup + todo + coming + since + start;
+  return head + `<div class="home-grid"><div class="home-main">${start}${setup}${todo}</div><div class="home-side">${coming}${since}</div></div>`;
 }
 const evPick = (attr, list, none) => list.length
   ? `<p class="lede">For which event?</p><ul class="ev-docs">${list.map((e) => `<li><button class="ev-doc" type="button" ${attr}="${e.id}"><span><span class="k">${esc(e.name)}</span><span class="s">${esc(e.date ? dShort(e.date) : "No date yet")}</span></span></button></li>`).join("")}</ul>`
@@ -506,7 +524,7 @@ function eventsBody() {
   return html || `<section class="sheet"><p class="empty">Nothing matches. Try another status or clear the search.</p></section>`;
 }
 function renderEvents() {
-  const head = titleBlock("Events", "Every activity", `<p>Tap an event to see its documents and where each one stands, or start the ones it still needs.</p>`);
+  const head = titleBlock("Events", "Every activity", `<p>Tap an event to see its documents and where each one stands.</p>`);
   const add = ui.evAdding
     ? `<section class="sheet sheet-pad ev-new"><h2>New event</h2><div class="fields"><div class="field"><label for="evNewN">Event</label><input class="line-in" id="evNewN" autocomplete="off" placeholder="e.g. Christmas Party"></div>
         <div class="two"><div class="field"><label for="evNewD">Date</label><input class="line-in" id="evNewD" type="date"></div><div class="field"><label for="evNewV">Venue <span class="opt">(optional)</span></label><input class="line-in" id="evNewV" autocomplete="off" placeholder="e.g. EYA-CLI Laboratory"></div></div></div>

@@ -53,6 +53,8 @@
   <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></symbol>
   <symbol id="i-chev" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M14 4h4.5v16H14"/><path d="M10 16l-4-4 4-4M6 12h9"/></symbol>
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></symbol>
 </svg>
 
@@ -62,13 +64,6 @@
   <!-- the hub: Sign in, Home, Tools, Library, Profile (workflows open over it in focus mode) -->
   <div class="signin" id="signin"></div>
   <div class="hub" id="hub">
-    <header class="hubhead glass" id="hubhead">
-      <a class="hd-mark" href="#" data-tab="home" aria-label="sectreas hub, home">sectreas hub</a>
-      <div class="hh-t" id="hubTitle">Home</div>
-      <nav class="areas hh-nav" aria-label="Hub" id="hubNav"></nav>
-      <span class="grow"></span>
-      <div class="areas hh-role" role="radiogroup" aria-label="Show tools for" id="roleSwitch"></div>
-    </header>
     <div class="hub-layout">
       <aside class="rail hub-rail" id="hubRail"></aside>
       <main class="hub-main" id="hubMain"></main>
@@ -76,7 +71,10 @@
   </div>
   <div class="sec" id="sec"></div>
   <div class="cert" id="cert"></div>
-  <nav class="tabbar glass" id="tabbar" aria-label="Hub"></nav>
+  <!-- the hub's sidebar: always there on desktop, a drawer from the menu button on phones -->
+  <button class="menu-btn glass" id="menuBtn" type="button" aria-label="Open the menu" aria-controls="side" aria-expanded="false"><svg class="i"><use href="#i-menu"/></svg></button>
+  <div class="side-scrim" id="sideScrim" hidden></div>
+  <aside class="side glass" id="side" aria-label="Hub menu"></aside>
   <div class="apscrim" id="apScrim" hidden></div>
   <div class="apsheet" id="apSheet" role="dialog" aria-modal="true" aria-labelledby="apT" hidden></div>
   <header class="apphead glass" id="apphead"><a class="hd-mark" href="#" aria-label="sectreas hub, home">sectreas hub</a><nav class="areas" aria-label="Treasurer area"><button type="button" data-area="req" aria-current="page">Budget Requests</button><button type="button" data-area="liq">Liquidation</button></nav><span class="grow"></span><span class="badge" id="hdBadge" data-stage="0" role="status">Draft</span></header>

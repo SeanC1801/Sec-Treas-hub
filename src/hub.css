@@ -275,3 +275,66 @@
 .setup .box{width:22px;height:22px;border-radius:6px;border:1.5px solid #9DB4CB;display:grid;place-items:center;font-size:13px;font-weight:700;color:#fff}
 .setup li.ok .box{background:var(--leaf);border-color:var(--leaf)}
 .setup li.ok span:nth-child(2){color:var(--ink-2);text-decoration:line-through;text-decoration-color:rgba(54,80,106,.4)}
+
+/* ================= Sidebar (replaces the top bar and the bottom tabs, 2026-11-06) =================
+   Structure taken from the TimeKeeper reference (fixed side navigation + a focused main list +
+   a right column for recent activity); colours stay ours: glass control, ink text, sky behind. */
+#side,#menuBtn,.side-scrim{display:none}
+.device[data-view="hub"] #side{display:flex}
+.device[data-view="hub"] .side-scrim:not([hidden]){display:block}
+.side{position:absolute;z-index:9;top:var(--s3);bottom:var(--s3);left:var(--s3);width:252px;flex-direction:column;gap:var(--s5);padding:var(--s5) var(--s3) var(--s3);border-radius:var(--r-glass);overflow:auto;overscroll-behavior:contain}
+.side.glass{background:rgba(236,246,255,.9)}
+.side-brand{display:flex;align-items:center;gap:var(--s2);padding:0 var(--s2)}
+.side-brand .logos img{height:30px}.side-brand .logos .acm{height:25px}
+.side-brand .wm{font-weight:600;font-size:15px;line-height:20px;white-space:nowrap;letter-spacing:-.01em;color:var(--ink)}
+.side-nav{display:grid;gap:2px}
+.side-nav button{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:var(--s3);min-height:48px;padding:0 var(--s3);border-radius:var(--r-ctl);font-weight:600;font-size:15px;color:var(--ink-2);cursor:pointer}
+.side-nav button svg.i{width:20px;height:20px}
+.side-nav button[aria-current="page"]{background:#fff;color:var(--ink);box-shadow:inset 1px 1px 0 #fff,1px 2px 3px -1px rgba(16,62,120,.3)}
+.side-nav button:focus-visible{box-shadow:var(--ring)}
+@media (hover:hover) and (pointer:fine){ .side-nav button:not([aria-current]):hover{background:rgba(255,255,255,.55);color:var(--ink)} }
+.side-start{display:grid;gap:var(--s2);padding-top:var(--s4);border-top:1px solid rgba(11,42,74,.14)}
+.side-k{font-size:12px;line-height:16px;font-weight:700;color:var(--ink-2);padding:0 var(--s2) var(--s1)}
+.side-start .key,.side-start .ghost{width:100%;justify-content:flex-start;padding:0 var(--s4)}
+.side-links{display:grid;justify-items:start;padding:var(--s2) var(--s2) 0}
+.side-links .textbtn{margin:0;padding:var(--s2) 0}
+.side-foot{margin-top:auto;display:grid;grid-template-columns:minmax(0,1fr) 44px;align-items:center;gap:var(--s2);padding:var(--s3) var(--s2) 0;border-top:1px solid rgba(11,42,74,.14)}
+.side-foot .me{display:grid;min-width:0}
+.side-foot b{font-size:13px;line-height:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-foot span{font-size:12px;line-height:16px;color:var(--ink-2)}
+.side svg.i{pointer-events:none}
+
+/* the old top bar, bottom tabs and title rail are gone */
+#hubhead,#tabbar,.hub-rail{display:none!important}
+.hub-layout{display:block;padding:var(--s3) var(--s2) var(--s7)}
+.hub-title{display:block!important}
+.hub-title h1:focus{outline:none}
+
+/* Home: role switch beside your role; two columns on desktop */
+.who-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s3);margin-top:var(--s2)}
+.who-row .who{margin:0}
+.home-role{padding:3px;border-radius:13px;background:rgba(11,42,74,.07)}
+.home-role button{height:36px;padding:0 var(--s4)}
+.home-grid,.home-main,.home-side{display:grid;gap:var(--s3);align-content:start;min-width:0}
+.start-sheet .start-pick{padding-bottom:var(--s3)}
+
+/* phones and tablets: the sidebar is a drawer from the menu button */
+@container app (max-width: 959px){
+  .device[data-view="hub"] #menuBtn{display:grid}
+  .menu-btn{position:absolute;z-index:8;top:var(--s3);left:var(--s3);width:48px;height:48px;place-items:center;border:0;border-radius:14px;color:var(--ink);cursor:pointer}
+  .menu-btn svg.i{width:22px;height:22px;pointer-events:none}
+  .side{left:var(--s2);top:var(--s2);bottom:var(--s2);width:min(288px,84%);transform:translateX(calc(-100% - 24px));visibility:hidden;transition:transform .22s var(--out),visibility 0s linear .22s;box-shadow:var(--sh-pop)}
+  .side.open{transform:none;visibility:visible;transition:transform .22s var(--out)}
+  .side-scrim{position:absolute;inset:0;z-index:8;background:rgba(11,42,74,.28)}
+  .hub-layout{padding-top:72px}
+  .hub-title{padding-top:0}
+}
+@media (prefers-reduced-motion:reduce){ .side{transition:none!important} }
+/* desktop: the sidebar is always there; main list in the middle, activity on the right */
+@container app (min-width: 960px){
+  .hub-layout{padding:var(--s6) var(--s6) var(--s7) calc(252px + var(--s3) + var(--s6));max-width:1240px}
+  .home-grid{grid-template-columns:minmax(0,1fr) minmax(280px,340px);gap:var(--s5);align-items:start}
+  .hub-main{max-width:none}
+  .hub-title{padding:0 0 var(--s4)}
+  .hub-title h1{font-size:36px;line-height:40px}
+}
