@@ -278,7 +278,7 @@ root.addEventListener("click", (e) => {
   if (rw) { const [g, r] = rw.dataset.k.split(":").map(Number), w = m.groups[g].rows[r].who, n = rw.dataset.rwho, i = w.indexOf(n); i < 0 ? w.push(n) : w.splice(i, 1); rw.setAttribute("aria-checked", i < 0); save(); return; }
   const rd = c("[data-rdel]");
   if (rd) { const [g, r] = rd.dataset.rdel.split(":").map(Number), was = m.groups[g].rows.splice(r, 1)[0]; openRow = null; save(); render(); TR.toast(`Removed “${was.task || "task"}”`, () => { m.groups[g].rows.splice(r, 0, was); save(); render(); }); return; }
-  if (c("#mFinal")) { m.final = !m.final; save(); render(); TR.toast(m.final ? "Marked as final" : "Back to draft"); return; }
+  if (c("#mFinal")) { m.final = !m.final; m.finalAt = m.final ? Date.now() : null; m.finalBy = me().name; save(); render(); TR.toast(m.final ? "Marked as final" : "Back to draft"); return; }
   if (c("#mPrint")) {
     $("#printArea").innerHTML = `<div class="mpaper mprint">${pagesHTML(m)}</div>`;
     $("#pageSize").textContent = "@page{size:8.5in 11in;margin:0}";

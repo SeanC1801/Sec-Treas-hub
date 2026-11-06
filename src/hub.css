@@ -219,3 +219,59 @@
 .home-sec.open .band-btn .chev{transform:rotate(180deg)}
 .band-btn.todo .chev{color:var(--ink)}
 @media (prefers-reduced-motion:reduce){ .band-btn .chev{transition:none} }
+
+/* ================= Home (agreed 2026-11-06): plain ledger headings, colour only for meaning ================= */
+.hub-title .who{margin:var(--s1) 0 0;color:var(--ink-2);font-size:14px;line-height:20px;font-weight:600}
+.hub-rail .who{margin-top:var(--s1)}
+.home-block{padding-bottom:var(--s2)}
+.hl{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s3);padding:var(--s4) var(--s4) var(--s2);border-bottom:1.5px solid var(--rule-2)}
+.hl h2,.hl h3{margin:0;font-size:15px;line-height:22px;font-weight:700}
+.hl .cnt{font-size:13px;line-height:18px;font-weight:700;color:var(--ink-2);font-variant-numeric:tabular-nums}
+/* needs-you accent: the ACM cyan from the letterhead (with ink text, 10:1) */
+.hl.todo .cnt{min-width:28px;text-align:center;padding:1px 8px;border-radius:8px;background:#5CE1E6;color:var(--ink)}
+.hl + .rows{border-top:0}
+.rows .grp{padding:var(--s3) var(--s4) var(--s1);font-size:12px;line-height:16px;font-weight:700;color:var(--ink-2);background:var(--open);border-bottom:1px solid var(--rule)}
+.rows .grp.over{color:var(--sun)}
+.go.todo .verb{color:var(--action)}
+.due{font-weight:700;color:var(--ink-2)}
+.due.over{color:var(--sun)} .due.today{color:var(--action)}
+.stbtn.copy{color:var(--action);text-decoration:none;border-left:1px solid var(--rule);padding-left:var(--s3);margin-right:var(--s2)}
+/* Done today: stamped once */
+.done-tray{margin-top:var(--s2)}
+.hl.sub{padding-top:var(--s3);border-bottom-width:1px}
+.hl.sub h3{font-size:13px;color:var(--ink-2)}
+.done-row{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:var(--s3);align-items:center;padding:var(--s3) var(--s4);border-bottom:1px solid var(--rule)}
+.done-row:last-child{border-bottom:0}
+.done-row .tick{color:var(--leaf);font-weight:700}
+.done-row .nm{display:block;font-weight:600;color:var(--ink-2);line-height:20px}
+.done-row .mt{display:block;font-size:12px;line-height:16px;color:var(--ink-2)}
+.mini-stamp{font-size:11px;line-height:14px;font-weight:700;letter-spacing:.12em;color:var(--stamp);border:2px solid var(--stamp);border-radius:4px;padding:1px 6px;transform:rotate(-4deg);opacity:.9}
+.mini-stamp.fresh{animation:stampIn .22s var(--out) both}
+@keyframes stampIn{from{transform:scale(1.12) rotate(0);opacity:0}to{transform:scale(1) rotate(-4deg);opacity:.9}}
+@media (prefers-reduced-motion:reduce){ .mini-stamp.fresh{animation:fadeIn .2s linear both} @keyframes fadeIn{from{opacity:0}to{opacity:.9}} }
+/* Coming up: B · L · C · M ledger strip — pencil (not started), ink (in progress), stamped (done) */
+.strip{display:inline-flex;gap:4px;flex:none}
+.strip .mk{display:grid;place-items:center;width:24px;height:24px;border-radius:4px;font-size:11px;font-weight:700}
+.strip .mk.todo{border:1.5px dashed #9DB4CB;color:var(--pencil)}
+.strip .mk.prog{border:1.5px solid var(--ink-2);color:var(--ink)}
+.strip .mk.done{background:var(--stamp);color:#fff}
+/* Since you were last here */
+.rows.since li{display:grid;gap:2px;padding:var(--s3) var(--s4);border-bottom:1px solid var(--rule)}
+.rows.since li:last-child{border-bottom:0}
+.rows.since .nm{font-size:14px;line-height:20px;font-weight:600}
+.rows.since .mt{font-size:12px;line-height:16px;color:var(--ink-2)}
+/* Start something */
+.start-row{display:flex;flex-wrap:wrap;gap:var(--s3);padding:var(--s4) var(--s4) var(--s2)}
+.start-row .ghost[aria-expanded="true"]{border-color:var(--action);color:var(--action)}
+.start-pick{padding:0 var(--s4)}
+.start-pick .lede{margin:var(--s2) 0 0;font-size:13px;color:var(--ink-2)}
+.start-pick .ev-docs{margin-left:0;padding-left:var(--s3)}
+.start-pick .ev-edit.tn{padding:var(--s3) 0}
+.start-more{display:flex;flex-wrap:wrap;gap:var(--s5);padding:var(--s2) var(--s4) var(--s3)}
+.start-more .textbtn{margin:0;padding:var(--s3) 0}
+/* Get set up */
+.setup{list-style:none;margin:0;padding:var(--s2) var(--s4) 0;display:grid;gap:var(--s3)}
+.setup li{display:grid;grid-template-columns:22px 1fr;gap:var(--s3);align-items:center;font-size:14px;line-height:20px}
+.setup .box{width:22px;height:22px;border-radius:6px;border:1.5px solid #9DB4CB;display:grid;place-items:center;font-size:13px;font-weight:700;color:#fff}
+.setup li.ok .box{background:var(--leaf);border-color:var(--leaf)}
+.setup li.ok span:nth-child(2){color:var(--ink-2);text-decoration:line-through;text-decoration-color:rgba(54,80,106,.4)}

@@ -5,7 +5,7 @@ import { TR } from "./prototype.js";
 import { ROLES, getSession, setSession, me } from "./session.js";
 import { minutesList, openMinutes, showMinutes, newMinutes } from "./minutes.js";
 import { certList, openCerts, showCerts, newBatch, TYPES as CERT_TYPES } from "./certs.js";
-import { eventList, eventById, addEvent, updateEvent, removeEvent, restoreEvent, sameEvent, mentions } from "./events.js";
+import { eventList, eventById, addEvent, updateEvent, removeEvent, restoreEvent, sameEvent, mentions, lrDue, brDue } from "./events.js";
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -209,130 +209,188 @@ function toolStatus(k) {
   if (k === "certs") return plural(certList().length, "batch", "batches");
   return "";
 }
-// a coloured heading band: kind = todo | tre | sec | navy | month
+// a coloured heading band (Events and Profile; Home uses plain ledger headings)
 const bandK = (kind, title, right = "") => `<div class="sheet-h band ${kind}"><h2>${esc(title)}</h2>${right ? `<span>${esc(right)}</span>` : ""}</div>`;
 const lensRole = () => (signerRole() ? me().role : ui.lens);
-const roleKind = () => (lensRole() === "secretary" ? "sec" : "tre");
 
-/* the to-do list: what this role should do next, each item opens the exact spot */
+/* ================= Home (agreed 2026-11-06, docs/design/HOME_PLAN_2026-11.md §9) ================= */
+const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+const addDays = (iso, n) => { const d = new Date(iso + "T00:00"); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+const evOf = (d) => eventById(d.ev || d.id);
+// the due date of a document, per D2: liquidation = day after the event, budget = set by the Treasurer
+function dueOf(d) {
+  if (d.kind === "br") return brDue(evOf(d));
+  if (d.kind === "lr") return lrDue(evOf(d));
+  return "";
+}
+const GROUPS = [["over", "Overdue"], ["today", "Today"], ["week", "This week"], ["later", "Later"], ["none", "No due date"]];
+function groupOf(due) {
+  if (!due) return "none";
+  const t = todayISO();
+  return due < t ? "over" : due === t ? "today" : due <= addDays(t, 7) ? "week" : "later";
+}
+const dueText = (due) => { if (!due) return ""; const g = groupOf(due); return g === "over" ? `was due ${dShort(due)}` : g === "today" ? "due today" : `due ${dShort(due)}`; };
+
+/* what this person should do, each with its due date; plus what's waiting on others (Copy link) */
 function todos() {
-  const u = me(), all = docs(), T = [];
-  const add = (verb, what, why, act, warn) => T.push({ verb, what, why, act, warn });
+  const u = me(), all = docs(), T = [], W = [];
+  const add = (d, verb, why, act) => T.push({ d, verb, why, act, due: dueOf(d) });
   if (signerRole()) {
-    all.filter(needsMe).forEach((d) => add(u.role === "president" ? "Sign" : "Note", d.title, `${d.type} · waiting for you`, `data-path="${d.key}"`));
-    return T;
-  }
-  if (lensRole() === "treasurer") {
-    all.filter((d) => (d.kind === "br" || d.kind === "lr") && isReturned(d.st())).forEach((d) => {
-      const l = lastLog(d.st()), note = (l.note || "").replace(/^Returned:?\s*/, "");
-      add("Fix and resend", d.title, `${d.type} · returned by ${firstName(l.by)}${note ? `: “${note}”` : ""}`, `data-open="${d.key}"`, true);
-    });
-    all.filter((d) => (d.kind === "br" || d.kind === "lr") && stageOf(d) === 3).forEach((d) => add("Record the CSC’s approval", d.title, `${d.type} · with the CSC`, `data-path="${d.key}"`));
-    all.filter((d) => d.kind === "lr" && stageOf(d) === 0 && !isReturned(d.st())).forEach((d) => {
-      const e = TR.evData(d.id), past = e.r.date && new Date(e.r.date + "T23:59") < new Date();
-      add(e.items.length ? "Finish and send" : "Liquidate", d.title, e.items.length ? `Liquidation report · ${d.meta}` : `Budget approved${past ? ` · the event was ${dShort(e.r.date)}; liquidation is due the next day` : ""}`, `data-open="${d.key}"`, past && !e.items.length);
-    });
-    all.filter((d) => d.kind === "br" && stageOf(d) === 0 && !isReturned(d.st())).forEach((d) => {
-      const b = d.st(), need = b.items.filter((i) => !(Number(i.amt) > 0)).length;
-      add(b.items.length ? "Finish and send" : "Add budget lines", d.title, b.items.length ? (need ? `Budget request · ${plural(need, "line needs", "lines need")} an amount` : "Budget request · ready to send to the President") : "Budget request · no lines yet", `data-open="${d.key}"`);
-    });
+    all.filter(needsMe).forEach((d) => add(d, u.role === "president" ? "Sign" : "Note", `${d.type} · waiting for your ${u.role === "president" ? "signature" : "note"}`, `data-path="${d.key}"`));
+  } else if (lensRole() === "treasurer") {
+    for (const d of all.filter((x) => x.kind === "br" || x.kind === "lr")) {
+      const st = d.st(), sg = st.stage;
+      if (isReturned(st)) {
+        const l = lastLog(st), note = (l.note || "").replace(/^Returned:?\s*/, "");
+        add(d, "Fix and resend", `${d.type} · returned by ${l.by}${note ? `: “${note}”` : ""}`, `data-open="${d.key}"`);
+      } else if (sg === 3) add(d, "Record the CSC’s approval", `${d.type} · with the CSC`, `data-path="${d.key}"`);
+      else if (sg === 0 && d.kind === "lr") {
+        const e = TR.evData(d.id), due = dueOf(d), happened = !due || due <= addDays(todayISO(), 1);
+        if (e.items.length) add(d, "Finish and send", `Liquidation report · ${d.meta}`, `data-open="${d.key}"`);
+        else if (due && happened) add(d, "Liquidate", `Budget approved · the event was ${dShort(evOf(d).date)}`, `data-open="${d.key}"`);
+      } else if (sg === 0 && d.kind === "br") {
+        const b = d.st(), need = b.items.filter((i) => !(Number(i.amt) > 0)).length;
+        add(d, b.items.length ? "Finish and send" : "Add budget lines", b.items.length ? (need ? `Budget request · ${plural(need, "line needs", "lines need")} an amount` : "Budget request · ready to send to the President") : "Budget request · no lines yet", `data-open="${d.key}"`);
+      } else if (sg >= 1 && sg <= 2) W.push(d);
+    }
   } else {
-    minutesList().filter((m) => !m.final).forEach((m) => add("Finish minutes", `Meeting, ${dShort(m.date)}`, "Minutes · not marked final yet", `data-open="mn:${m.id}"`));
-    certList().filter((c) => !String(c.names || "").trim()).forEach((c) => add("Add names", c.event || "Untitled event", "Certificates · no names yet", `data-open="ct:${c.id}"`));
+    minutesList().filter((m) => !m.final).forEach((m) => { const d = all.find((x) => x.key === "mn:" + m.id); add(d, "Finish minutes", "Minutes · not marked final yet", `data-open="mn:${m.id}"`); });
+    certList().filter((c) => !String(c.names || "").trim()).forEach((c) => {
+      const d = all.find((x) => x.key === "ct:" + c.id), e = c.evId && eventById(c.evId);
+      T.push({ d, verb: "Add names", why: "Certificates · no names yet", act: `data-open="ct:${c.id}"`, due: e && e.date ? e.date : "" });
+    });
   }
-  return T;
+  // most urgent first: by group, then returned first, then by due date
+  const rank = (t) => GROUPS.findIndex((g) => g[0] === groupOf(t.due));
+  T.sort((a, b) => rank(a) - rank(b) || (b.verb === "Fix and resend") - (a.verb === "Fix and resend") || (a.due || "9").localeCompare(b.due || "9"));
+  return { T, W };
 }
-const todoRow = (t) => `<li class="hrow single"><button class="go todo" type="button" ${t.act}><span><span class="nm"><span class="verb${t.warn ? " warn" : ""}">${esc(t.verb)}</span> · ${esc(t.what)}</span><span class="mt">${esc(t.why)}</span></span><svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></button></li>`;
+const todoRow = (t) => `<li class="hrow single"><button class="go todo" type="button" ${t.act}><span><span class="nm"><span class="verb">${esc(t.verb)}</span> · ${esc(t.d.title)}</span><span class="mt">${esc(t.why)}${t.due ? ` · <span class="due ${groupOf(t.due)}">${esc(dueText(t.due))}</span>` : ""}</span></span><svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></button></li>`;
+const waitRow = (d) => { const who = { 1: ORG.president, 2: ORG.adviser }[stageOf(d)];
+  return `<li class="hrow"><button class="go" type="button" data-path="${d.key}"><span><span class="nm">${esc(d.title)}</span><span class="mt">${esc(d.type)} · with ${esc(who || "the signatory")}</span></span></button><button class="stbtn copy" type="button" data-copy="${d.key}" aria-label="Copy a link to ${esc(d.title)}">Copy link</button></li>`; };
 
-/* the tools: where work starts and where in-progress work lives */
-const evPick = (attr, list, none) => list.length
-  ? `<div class="pick"><p class="lede">For which event?</p><ul class="ev-docs">${list.map((e) => `<li><button class="ev-doc" type="button" ${attr}="${e.id}"><span><span class="k">${esc(e.name)}</span><span class="s">${esc(e.date ? dShort(e.date) : "No date yet")}</span></span></button></li>`).join("")}</ul></div>`
-  : `<p class="empty">${none}</p>`;
-function toolDrop(k) {
-  const all = docs(), rows = (ds) => (ds.length ? `<ul class="rows inprog">${ds.map(docRow).join("")}</ul>` : `<p class="empty">Nothing in progress.</p>`);
-  const newEv = `<div class="ev-edit"><div class="field"><label for="tnN">Or a new event</label><input class="line-in" id="tnN" autocomplete="off" placeholder="e.g. Christmas Party"></div><div class="two"><div class="field"><label for="tnD">Date</label><input class="line-in" id="tnD" type="date"></div><div class="field"><label for="tnV">Venue <span class="opt">(optional)</span></label><input class="line-in" id="tnV" autocomplete="off"></div></div><div class="m-foot" style="margin-top:0"><span></span><button class="ghost sm" type="button" data-tnew="${k}">Start for this new event</button></div></div>`;
-  if (k === "br") {
-    const prog = all.filter((d) => d.kind === "br" && stageOf(d) < 4).sort((a, b) => b.at - a.at);
-    const free = eventList().filter((e) => { const x = eventDocs(e); return !x.b && !x.bp; });
-    return rows(prog) + (ui.pick === "br" ? evPick("data-brfor", free, "Every event already has a budget request.") + newEv : `<ul class="ev-docs">${addBtn('data-pickfor="br"', "New budget request")}</ul>`);
+/* things I finished today (from the status logs and minutes), for the Done today tray */
+function doneToday() {
+  const u = me(), t0 = new Date(todayISO() + "T00:00").getTime(), out = [];
+  const SAID = { 1: "Sent to the President", 2: "Signed", 3: "Noted", 4: "Recorded the CSC’s approval" };
+  for (const d of docs()) {
+    if (d.kind === "mn") { const m = minutesList().find((x) => x.id === d.id); if (m && m.final && m.finalAt >= t0 && m.finalBy === u.name) out.push({ id: d.key + m.finalAt, at: m.finalAt, what: d.title, how: "Marked final" }); continue; }
+    const st = d.st(); if (!st || !st.log) continue;
+    st.log.filter((x) => x.at >= t0 && x.by === u.name && x.to > 0).forEach((x) => out.push({ id: d.key + x.at, at: x.at, what: d.title, how: SAID[x.to] }));
   }
-  if (k === "lr") {
-    const prog = all.filter((d) => d.kind === "lr" && stageOf(d) < 4).sort((a, b) => b.at - a.at);
-    return rows(prog) + `<ul class="ev-docs">${addBtn('data-tool="lr"', "Open the semester tracker")}</ul>`;
-  }
-  if (k === "minutes") {
-    const prog = all.filter((d) => d.kind === "mn" && d.label === "Draft").sort((a, b) => b.at - a.at);
-    return rows(prog) + `<ul class="ev-docs">${addBtn('data-mnnew="1"', "New minutes")}${addBtn('data-tool="minutes"', "All meetings")}</ul>`;
-  }
-  const prog = all.filter((d) => d.kind === "ct").sort((a, b) => b.at - a.at).slice(0, 4);
-  return rows(prog) + (ui.pick === "certs" ? evPick("data-ctfor", eventList(), "No events yet.") + newEv : `<ul class="ev-docs">${addBtn('data-pickfor="certs"', "New certificate batch")}${addBtn('data-tool="certs"', "All batches")}</ul>`);
+  return out.sort((a, b) => b.at - a.at);
 }
+/* changes by other people since my last visit */
+let LAST_VISIT = ui.lastSeen || 0;
+ui.lastSeen = Date.now(); keep();
+function sinceLast() {
+  const u = me(), out = [];
+  const DID = { 0: "returned", 1: "sent", 2: "signed", 3: "noted", 4: "recorded the CSC’s approval of" };
+  for (const d of docs()) {
+    if (d.kind === "mn") { const m = minutesList().find((x) => x.id === d.id); if (m && m.finalAt > LAST_VISIT && m.finalBy && m.finalBy !== u.name) out.push({ at: m.finalAt, text: `${m.finalBy} finished the ${d.title.replace("Meeting, ", "")} minutes` }); continue; }
+    const st = d.st(); if (!st || !st.log) continue;
+    st.log.filter((x) => x.at > LAST_VISIT && x.by !== u.name && !/^Unsent/.test(x.note || "")).forEach((x) => out.push({ at: x.at, text: `${x.by} ${DID[x.to]} the ${d.title} ${d.kind === "lr" ? "liquidation" : "budget"}` }));
+  }
+  return out.sort((a, b) => b.at - a.at).slice(0, 3);
+}
+
+/* an event's four documents as a small ledger strip: not started (pencil) / in progress (ink) / done (stamped) */
+function strip(e) {
+  const x = eventDocs(e), mark = (k, label, s) => `<span class="mk ${s}" title="${label}: ${{ todo: "not started", prog: "in progress", done: "done" }[s]}"><b>${k}</b><span class="sr">${label}: ${{ todo: "not started", prog: "in progress", done: "done" }[s]}</span></span>`;
+  const b = x.bp || (x.b && x.b.stage === 4) ? "done" : x.b ? "prog" : "todo";
+  const l = x.lr && x.lr.e.stage === 4 ? "done" : x.lr && x.lr.e.items.length ? "prog" : "todo";
+  const c = x.certs.length ? (x.certs.every((v) => String(v.names || "").trim()) ? "done" : "prog") : "todo";
+  const m = x.mins.length ? (x.mins.every((v) => v.final) ? "done" : "prog") : "todo";
+  return `<span class="strip">${mark("B", "Budget request", b)}${mark("L", "Liquidation", l)}${mark("C", "Certificates", c)}${mark("M", "Minutes", m)}</span>`;
+}
+
+/* first-run checklist, per person */
+function setupState() {
+  const u = me(), s = (ui.setup || {})[u.name] || {};
+  const steps = [["Sign in", true], ["Check the signatories in Profile", !!s.profile], ["Open an event in Events", !!s.events], [signerRole() ? "Open a document from your to-do list" : "Start your first document", signerRole() ? !!s.opened : !!s.started]];
+  return { steps, done: steps.filter((x) => x[1]).length, skipped: !!s.skip };
+}
+const markSetup = (k) => { const n = me().name; ui.setup = { ...(ui.setup || {}), [n]: { ...((ui.setup || {})[n] || {}), [k]: true } }; keep(); };
+
 const GUIDE = {
-  treasurer: ["Open Budget Requests below and start one for the event. Send it to the President when every line has an amount.",
-    "It goes to the President, then the Adviser, then the CSC. When the CSC approves, record it here; your to-do list reminds you.",
+  treasurer: ["Start a budget request for an event and send it to the President when every line has an amount.",
+    "It goes to the President, then the Adviser, then the CSC. When the CSC approves, record it here.",
     "The day after the event, liquidate it: add each receipt, and the winners’ IDs if there were cash prizes.",
-    "Send the Liquidation Report the same way. Finished documents live in Events."],
-  secretary: ["After each meeting, open Minutes below: details, attendance, notes and action items. Mark them final when done.",
-    "Before an event, start its certificates from Certificates below, then paste the names.",
+    "Send the liquidation report the same way. Finished documents live in Events."],
+  secretary: ["After each meeting, write the minutes: details, attendance, notes and action items. Mark them final when done.",
+    "Before an event, start its certificates and paste the names.",
     "Check each name in the preview, then print all as one PDF.",
     "Finished minutes and certificates live in Events, under their event."],
   president: ["Documents waiting for your signature show in your to-do list.", "Open one, check it, then mark it as signed or return it with a note.", "Events shows where every document stands."],
   adviser: ["Documents waiting for your note show in your to-do list.", "Open one, check it, then mark it as noted or return it with a note.", "Events shows where every document stands."],
 };
-// Home's main sections open and close from their heading band
-const SEC_DEFAULT = { todo: true, tools: true, coming: false, guide: false };
-const secOpen = (id) => ((ui.secOpen || {})[id] ?? SEC_DEFAULT[id]);
-function homeSection(id, kind, title, right, body) {
-  const open = secOpen(id);
-  return `<section class="sheet home-sec${open ? " open" : ""}"><button class="sheet-h band ${kind} band-btn" type="button" data-sec="${id}" aria-expanded="${open}" aria-controls="hs-${id}">
-      <h2>${esc(title)}</h2><span class="band-r">${right ? `<span>${esc(right)}</span>` : ""}<svg class="i chev" aria-hidden="true"><use href="#i-chev"/></svg></span></button>
-    <div id="hs-${id}"${open ? "" : " hidden"}>${open ? body : ""}</div></section>`;
-}
+const semester = (d = new Date()) => { const m = d.getMonth(); return m >= 7 ? "1st semester" : m <= 4 ? "2nd semester" : "Summer"; };
+const ledgerH = (title, count, cls = "") => `<div class="hl${cls ? " " + cls : ""}"><h2>${esc(title)}</h2>${count != null ? `<span class="cnt">${esc(count)}</span>` : ""}</div>`;
+
 function renderHome() {
-  const u = me(), role = lensRole(), all = docs(), T = todos();
-  const head = titleBlock(`${ROLES[u.role]} · A.Y. 2026–27`, `${hello()}, ${firstName(u.name)}`, `<p>${signerRole() ? "Here’s what needs you today." : `Here’s what to do next as ${role === "secretary" ? "Secretary" : "Treasurer"}.`}</p>`);
-  const todo = homeSection("todo", "todo", "To do", T.length ? String(T.length) : "",
-    T.length ? `<ul class="rows">${(ui.todoAll ? T : T.slice(0, 4)).map(todoRow).join("")}</ul>${T.length > 4 ? `<div class="pf-foot"><span></span><button class="textbtn" type="button" id="todoAll">${ui.todoAll ? "Show fewer" : `Show all ${T.length}`}</button></div>` : ""}` : `<p class="empty">You’re all caught up.</p>`);
-  let tools;
+  const u = me(), role = lensRole(), now = new Date();
+  const dateLine = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(now) + " · " + semester(now);
+  const head = titleBlock(dateLine, firstName(u.name), `<p class="who">${esc(ROLES[u.role])}${!signerRole() && role !== u.role ? ` · viewing as ${role === "secretary" ? "Secretary" : "Treasurer"}` : ""}</p>`);
+  // To do
+  const { T, W } = todos(), D = doneToday(), stamped = new Set(ui.stamped || []);
+  let rows = "";
+  for (const [g, label] of GROUPS) { const ts = T.filter((t) => groupOf(t.due) === g); if (ts.length) rows += `<li class="grp ${g}" aria-hidden="true">${label}</li>` + ts.map(todoRow).join(""); }
+  if (W.length) rows += `<li class="grp" aria-hidden="true">Waiting on others</li>` + W.map(waitRow).join("");
+  const doneRows = D.map((x) => `<li class="done-row"><span class="tick" aria-hidden="true">✓</span><span><span class="nm">${esc(x.how)} · ${esc(x.what)}</span><span class="mt">${new Intl.DateTimeFormat("en-PH", { hour: "numeric", minute: "2-digit" }).format(new Date(x.at))}</span></span><span class="mini-stamp${stamped.has(x.id) ? "" : " fresh"}" aria-label="Done">DONE</span></li>`).join("");
+  ui.stamped = [...new Set([...(ui.stamped || []), ...D.map((x) => x.id)])].slice(-50); keep();
+  const todo = `<section class="sheet home-block">${ledgerH("To do", T.length ? String(T.length) : null, "todo")}
+    ${rows ? `<ul class="rows">${rows}</ul>` : `<p class="empty">Nothing needs you right now.</p>`}
+    ${D.length ? `<div class="done-tray"><div class="hl sub"><h3>Done today</h3></div><ul class="rows">${doneRows}</ul></div>` : ""}</section>`;
+  // Coming up: next 3 events with a date
+  const t = todayISO(), soon = eventList().filter((e) => e.date && e.date >= t).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3);
+  const coming = `<section class="sheet home-block">${ledgerH("Coming up")}${soon.length ? `<ul class="rows">${soon.map((e) => `<li class="hrow single"><button class="go" type="button" data-goevent="${e.id}"><span><span class="nm">${esc(e.name)}</span><span class="mt">${esc(dShort(e.date))}${e.venue ? " · " + esc(e.venue) : ""}</span></span>${strip(e)}</button></li>`).join("")}</ul>` : `<p class="empty">No dated events ahead. Add dates in Events.</p>`}</section>`;
+  // Since you were last here
+  const S2 = sinceLast();
+  const since = S2.length ? `<section class="sheet home-block">${ledgerH("Since you were last here")}<ul class="rows since">${S2.map((x) => `<li><span class="nm">${esc(x.text)}</span><span class="mt">${esc(when(x.at))}</span></li>`).join("")}</ul></section>` : "";
+  // Start something
+  let start = "";
   if (!signerRole()) {
-    const tl = ROLE_TOOLS[role] || ROLE_TOOLS.treasurer;
-    tools = homeSection("tools", "tre", "Your tools", "Start and continue work", `<ul class="rows">${tl.map((k) => {
-      const open = ui.toolOpen === k;
-      return `<li class="hrow single ev tool${open ? " open" : ""}"><button class="go ev-h" type="button" data-toolopen="${k}" aria-expanded="${open}"><span><span class="nm">${TOOLS[k][0]}</span><span class="mt">${TOOLS[k][1]}</span><span class="ts">${esc(toolStatus(k))}</span></span><svg class="i chev" aria-hidden="true"><use href="#i-chev"/></svg></button>${open ? `<div class="tool-drop">${toolDrop(k)}</div>` : ""}</li>`;
-    }).join("")}</ul>`);
-  } else {
-    const moving = all.filter((d) => !d.past && stageOf(d) >= 1 && stageOf(d) <= 3 && !needsMe(d));
-    tools = homeSection("tools", "tre", "On its way", plural(moving.length, "document", "documents"), moving.length ? `<ul class="rows">${moving.map(docRow).join("")}</ul>` : `<p class="empty">Nothing else is moving right now.</p>`);
+    const B = role === "secretary"
+      ? [["data-mnnew=\"1\"", "New minutes"], ["data-pickfor=\"certs\"", "New certificate batch"]]
+      : [["data-pickfor=\"br\"", "New budget request"], ["data-tool=\"lr\"", "Liquidate an event"]];
+    const pick = ui.pick === "br" ? evPick("data-brfor", eventList().filter((e) => { const x = eventDocs(e); return !x.b && !x.bp; }), "Every event already has a budget request.") + newEvForm("br")
+      : ui.pick === "certs" ? evPick("data-ctfor", eventList(), "No events yet.") + newEvForm("certs") : "";
+    const more = role === "secretary" ? `<button class="textbtn" type="button" data-tool="minutes">All meetings</button><button class="textbtn" type="button" data-tool="certs">All certificate batches</button>` : `<button class="textbtn" type="button" data-tool="lr">Semester tracker</button>`;
+    start = `<section class="sheet home-block">${ledgerH("Start something")}<div class="start-row">${B.map(([a, l]) => `<button class="ghost" type="button" ${a}${ui.pick && a.includes(ui.pick) ? ' aria-expanded="true"' : ""}><svg class="i"><use href="#i-plus"/></svg>${l}</button>`).join("")}</div>${pick ? `<div class="start-pick">${pick}</div>` : ""}<div class="start-more">${more}</div></section>`;
   }
-  const now = new Date(), soon = eventList().filter((e) => e.date && new Date(e.date + "T23:59") >= now && new Date(e.date + "T00:00") - now < 31 * 864e5).sort((a, b) => a.date.localeCompare(b.date));
-  const coming = homeSection("coming", "tre", "Coming up", soon.length ? plural(soon.length, "event", "events") : "Next 30 days",
-    soon.length ? `<ul class="rows">${soon.map((e) => `<li class="hrow single"><button class="go" type="button" data-goevent="${e.id}"><span><span class="nm">${esc(e.name)}</span><span class="mt">${esc(dShort(e.date))}${e.venue ? " · " + esc(e.venue) : ""}</span><span class="ts">${esc(eventSummary(e, eventDocs(e)))}</span></span><svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></button></li>`).join("")}</ul>` : `<p class="empty">No events in the next 30 days.</p>`);
-  const gk = signerRole() ? u.role : role;
-  const guide = homeSection("guide", "tre", `Your role in ${GUIDE[gk].length} steps`, "", `<ol class="guide">${GUIDE[gk].map((g) => `<li>${esc(g)}</li>`).join("")}</ol><div style="height:var(--s4)"></div>`);
-  return head + todo + tools + coming + guide;
+  // Get set up (first run only)
+  const su = setupState();
+  const setup = su.skipped || su.done === su.steps.length ? "" : `<section class="sheet home-block">${ledgerH("Get set up", `${su.done} of ${su.steps.length}`)}<ul class="setup">${su.steps.map(([l, ok]) => `<li class="${ok ? "ok" : ""}"><span class="box" aria-hidden="true">${ok ? "✓" : ""}</span><span>${esc(l)}</span><span class="sr">${ok ? "done" : "not done"}</span></li>`).join("")}</ul><div class="pf-foot"><span></span><button class="textbtn" type="button" id="setupSkip">Skip</button></div></section>`;
+  return head + setup + todo + coming + since + start;
 }
-document.addEventListener("click", (e) => {
-  const b = e.target.closest("[data-sec]"); if (!b || !b.closest("#hub")) return;
-  ui.secOpen = { ...(ui.secOpen || {}), [b.dataset.sec]: !secOpen(b.dataset.sec) }; keep(); renderHub();
-  document.querySelector(`[data-sec="${b.dataset.sec}"]`)?.focus();
-});
+const evPick = (attr, list, none) => list.length
+  ? `<p class="lede">For which event?</p><ul class="ev-docs">${list.map((e) => `<li><button class="ev-doc" type="button" ${attr}="${e.id}"><span><span class="k">${esc(e.name)}</span><span class="s">${esc(e.date ? dShort(e.date) : "No date yet")}</span></span></button></li>`).join("")}</ul>`
+  : `<p class="empty">${none}</p>`;
+const newEvForm = (k) => `<div class="ev-edit tn"><div class="field"><label for="tnN">Or a new event</label><input class="line-in" id="tnN" autocomplete="off" placeholder="e.g. Christmas Party"></div><div class="two"><div class="field"><label for="tnD">Date</label><input class="line-in" id="tnD" type="date"></div><div class="field"><label for="tnV">Venue <span class="opt">(optional)</span></label><input class="line-in" id="tnV" autocomplete="off"></div></div><div class="m-foot" style="margin-top:0"><button class="textbtn" type="button" id="pickNo">Cancel</button><button class="ghost sm" type="button" data-tnew="${k}">Start for this new event</button></div></div>`;
+async function copyLink(key) {
+  const url = location.origin + location.pathname + "#doc=" + encodeURIComponent(key);
+  try { await navigator.clipboard.writeText(url); TR.toast("Link copied. Paste it in the group chat"); }
+  catch { if (navigator.share) navigator.share({ url }).catch(() => {}); else TR.toast(url); }
+}
 document.addEventListener("click", (e) => {
   const c = (s) => e.target.closest(s); if (!e.target.closest("#hub")) return;
-  const to = c("[data-toolopen]"); if (to) { ui.toolOpen = ui.toolOpen === to.dataset.toolopen ? null : to.dataset.toolopen; ui.pick = null; keep(); renderHub(); document.querySelector(`[data-toolopen="${to.dataset.toolopen}"]`)?.focus(); return; }
-  const pf = c("[data-pickfor]"); if (pf) { ui.pick = pf.dataset.pickfor; renderHub(); return; }
+  const cp = c("[data-copy]"); if (cp) { e.stopPropagation(); copyLink(cp.dataset.copy); return; }
+  if (c("#setupSkip")) { markSetup("skip"); renderHub(); return; }
+  const pf = c("[data-pickfor]"); if (pf) { ui.pick = ui.pick === pf.dataset.pickfor ? null : pf.dataset.pickfor; renderHub(); return; }
+  if (c("#pickNo")) { ui.pick = null; renderHub(); return; }
+  if (c("[data-brfor],[data-ctfor],[data-tnew],[data-mnnew]")) markSetup("started");
   const bf = c("[data-brfor]"); if (bf) { const x = eventById(bf.dataset.brfor); ui.pick = null; openBR(x.id, { name: x.name, date: x.date, venue: x.venue }); return; }
-  const cf = c("[data-ctfor]"); if (cf) { const x = eventById(cf.dataset.ctfor); ui.pick = null; setView("cert"); newBatch({ event: x.name, date: x.date || new Date().toISOString().slice(0, 10), evId: x.id }); return; }
+  const cf = c("[data-ctfor]"); if (cf) { const x = eventById(cf.dataset.ctfor); ui.pick = null; setView("cert"); newBatch({ event: x.name, date: x.date || todayISO(), evId: x.id }); return; }
   const tn = c("[data-tnew]"); if (tn) {
     const n = $("#tnN").value.trim(); if (!n) { $("#tnN").focus(); TR.toast("Give the new event a name"); return; }
     const x = addEvent({ name: n, date: $("#tnD").value, venue: $("#tnV").value }); ui.pick = null;
     if (tn.dataset.tnew === "br") openBR(x.id, { name: x.name, date: x.date, venue: x.venue });
-    else { setView("cert"); newBatch({ event: x.name, date: x.date || new Date().toISOString().slice(0, 10), evId: x.id }); }
+    else { setView("cert"); newBatch({ event: x.name, date: x.date || todayISO(), evId: x.id }); }
     return;
   }
-  if (c("#todoAll")) { ui.todoAll = !ui.todoAll; keep(); renderHub(); return; }
   if (c("[data-mnnew]")) { setView("sec"); newMinutes(true); return; }
-  const ge = c("[data-goevent]"); if (ge) { ui.tab = "events"; ui.evOpen = ge.dataset.goevent; keep(); renderHub(); $("#hub").scrollTop = 0; return; }
-  const gd = c("[data-guide]"); if (gd) { ui.guideOff = { ...(ui.guideOff || {}), [gd.dataset.guide]: !(ui.guideOff || {})[gd.dataset.guide] }; keep(); renderHub(); }
+  const ge = c("[data-goevent]"); if (ge) { ui.tab = "events"; ui.evOpen = ge.dataset.goevent; markSetup("events"); keep(); renderHub(); $("#hub").scrollTop = 0; return; }
+  if (c("[data-open],[data-path]") && signerRole()) markSetup("opened");
 });
 
 /* ---- filters (status and tool) used by the Events tab ---- */
@@ -411,8 +469,9 @@ function eventDrop(e, x) {
   const edit = ui.evEdit === e.id
     ? `<div class="ev-edit"><div class="field"><label for="evN">Event</label><input class="line-in" id="evN" autocomplete="off" value="${esc(e.name)}"></div>
         <div class="two"><div class="field"><label for="evD">Date</label><input class="line-in" id="evD" type="date" value="${esc(e.date)}"></div><div class="field"><label for="evV">Venue</label><input class="line-in" id="evV" autocomplete="off" value="${esc(e.venue)}"></div></div>
+        <div class="field"><label for="evB">Budget request due <span class="opt">(set by the Treasurer)</span></label><input class="line-in" id="evB" type="date" value="${esc(e.budgetDue || "")}"></div>
         <div class="m-foot" style="margin-top:0">${empty ? `<button class="textbtn danger" type="button" data-evdel="${e.id}">Delete event</button>` : "<span></span>"}<button class="ghost sm" type="button" data-evdone="${e.id}">Done</button></div></div>`
-    : `<div class="ev-foot"><button class="textbtn" type="button" data-evedit="${e.id}">Edit name, date or venue</button></div>`;
+    : `<div class="ev-foot"><button class="textbtn" type="button" data-evedit="${e.id}">Edit name, dates or venue</button></div>`;
   return `<ul class="ev-docs">${order.map((k) => parts[k]).join("")}</ul>${edit}`;
 }
 // the keys of every document that belongs to an event (to filter, and to find the ones with no event)
@@ -458,7 +517,7 @@ function renderEvents() {
 }
 document.addEventListener("click", (e) => {
   const c = (s) => e.target.closest(s); if (!e.target.closest("#hub")) return;
-  const t = c("[data-evtoggle]"); if (t) { ui.evOpen = ui.evOpen === t.dataset.evtoggle ? null : t.dataset.evtoggle; ui.evEdit = null; keep(); renderHub(); document.querySelector(`[data-evtoggle="${t.dataset.evtoggle}"]`)?.focus(); return; }
+  const t = c("[data-evtoggle]"); if (t) { markSetup("events"); ui.evOpen = ui.evOpen === t.dataset.evtoggle ? null : t.dataset.evtoggle; ui.evEdit = null; keep(); renderHub(); document.querySelector(`[data-evtoggle="${t.dataset.evtoggle}"]`)?.focus(); return; }
   if (c("#evAdd")) { ui.evAdding = true; renderHub(); $("#evNewN").focus(); return; }
   if (c("#evNewNo")) { ui.evAdding = false; renderHub(); return; }
   if (c("#evNewGo")) {
@@ -479,7 +538,7 @@ document.addEventListener("click", (e) => {
 });
 document.addEventListener("input", (e) => {
   const id = ui.evEdit; if (!id || !e.target.closest(".ev-edit")) return;
-  updateEvent(id, { name: $("#evN").value, date: $("#evD").value, venue: $("#evV").value });
+  updateEvent(id, { name: $("#evN").value, date: $("#evD").value, venue: $("#evV").value, budgetDue: $("#evB").value });
 });
 document.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.id && e.target.id.startsWith("evNew")) { e.preventDefault(); $("#evNewGo")?.click(); } });
 
@@ -506,7 +565,10 @@ function renderProfile() {
     <div id="offRows">${ORG.officers.map(offRow).join("")}</div>
     <div class="pf-foot"><button class="textbtn" type="button" id="offAdd">+ Add an officer</button><button class="textbtn danger" type="button" id="orgReset">Restore the chapter’s defaults</button></div>
     </section>`;
-  return head + you + sig + offs;
+  markSetup("profile");
+  const gk = signerRole() ? u.role : u.role === "secretary" ? "secretary" : "treasurer";
+  const how = `<section class="sheet">${bandK("navy", "How the hub works")}<ol class="guide">${GUIDE[gk].map((g) => `<li>${esc(g)}</li>`).join("")}</ol><div style="height:var(--s4)"></div></section>`;
+  return head + you + sig + offs + how;
 }
 const offRow = (o, i) => `<div class="off-row" data-off="${i}">
   <div class="field"><label class="sr" for="of-n${i}">Name</label><input class="line-in" id="of-n${i}" data-of="0" autocomplete="off" value="${esc(o[0])}" placeholder="Full name"></div>
@@ -654,3 +716,15 @@ $("#hdBadge")?.setAttribute("tabindex", "0");
 /* ---------------- boot ---------------- */
 if (!getSession()) setView("signin");
 else setView(["flow", "sec", "cert"].includes(ui.view) ? ui.view : "hub");
+
+/* a copied link (#doc=<key>) opens that document; until the server exists, only on the phone that has it */
+function openFromHash() {
+  const m = /^#doc=(.+)$/.exec(location.hash); if (!m) return;
+  history.replaceState(null, "", location.pathname + location.search);
+  if (!getSession()) return;
+  const d = doc(decodeURIComponent(m[1]));
+  if (d) d.open();
+  else { setView("hub"); TR.toast("That document isn’t on this phone yet. Links will work for everyone once the hub has its server."); }
+}
+openFromHash();
+addEventListener("hashchange", openFromHash);

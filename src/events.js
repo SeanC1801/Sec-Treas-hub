@@ -16,14 +16,21 @@ const save = () => { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catc
 
 export const eventList = () => DB.list;
 export const eventById = (id) => DB.list.find((e) => e.id === id) || null;
-export function addEvent({ name, date, venue }) {
-  const e = { id: "ev" + Date.now().toString(36), name: name.trim(), full: "", date: date || "", venue: (venue || "").trim() };
+export function addEvent({ name, date, venue, budgetDue }) {
+  const e = { id: "ev" + Date.now().toString(36), name: name.trim(), full: "", date: date || "", venue: (venue || "").trim(), budgetDue: budgetDue || "" };
   DB.list.push(e); save(); return e;
 }
 export function updateEvent(id, patch) { const e = eventById(id); if (e) { Object.assign(e, patch); save(); } return e; }
 export function removeEvent(id) { const i = DB.list.findIndex((e) => e.id === id); if (i < 0) return null; const [e] = DB.list.splice(i, 1); save(); return { e, i }; }
 export function restoreEvent({ e, i }) { DB.list.splice(i, 0, e); save(); }
 export const resetEvents = () => { DB = { v: 1, list: seed() }; save(); };
+
+// due dates: liquidation is due the day after the event (chapter minutes, Sep 11);
+// a budget request is due whenever the Treasurer sets it (no default)
+// local date, not toISOString (which would shift Manila midnight back a day)
+const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+export const lrDue = (e) => { if (!e || !e.date) return ""; const d = new Date(e.date + "T00:00"); d.setDate(d.getDate() + 1); return iso(d); };
+export const brDue = (e) => (e && e.budgetDue) || "";
 
 // a document belongs to an event by its id, or (for older ones) by the event's name
 export const sameEvent = (e, name) => !!name && [e.name, e.full].some((n) => n && norm(n) === norm(name));
