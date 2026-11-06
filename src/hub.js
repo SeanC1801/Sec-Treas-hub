@@ -5,6 +5,7 @@ import { TR } from "./prototype.js";
 import { ROLES, getSession, setSession, me } from "./session.js";
 import { minutesList, openMinutes, showMinutes, newMinutes } from "./minutes.js";
 import { certList, openCerts, showCerts, newBatch, TYPES as CERT_TYPES } from "./certs.js";
+import { PHOTOS, loadPhotos, addPhoto, dropPhoto, keepPhoto } from "./photos.js";
 import { eventList, eventById, addEvent, updateEvent, removeEvent, restoreEvent, sameEvent, mentions, lrDue, brDue } from "./events.js";
 
 const $ = (s) => document.querySelector(s);
@@ -150,9 +151,10 @@ function closeSide(focusBack = true) { if (!$("#side").classList.contains("open"
 $("#menuBtn").addEventListener("click", () => ($("#side").classList.contains("open") ? closeSide() : openSide()));
 $("#sideScrim").addEventListener("click", () => closeSide());
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("#side").classList.contains("open")) closeSide(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && ui.viewMenu) { ui.viewMenu = false; renderHub(); $("#viewBtn")?.focus(); } });
 $("#side").addEventListener("click", (e) => {
   const c = (s) => e.target.closest(s);
-  const t = c("[data-tab]"); if (t) { ui.tab = t.dataset.tab; keep(); closeSide(false); renderHub(); $("#hub").scrollTop = 0; $("#hubMain h1")?.focus?.(); return; }
+  const t = c("[data-tab]"); if (t) { ui.tab = t.dataset.tab; ui.evPage = null; keep(); closeSide(false); renderHub(); $("#hub").scrollTop = 0; $("#hubMain h1")?.focus?.(); return; }
   if (c("#sideMin")) { ui.sideMin = !ui.sideMin; keep(); renderChrome(); $("#sideMin").focus(); return; }
   if (c("#sideOut")) { closeSide(false); setSession(null); TR.toast("Signed out"); setView("signin"); }
 });
@@ -292,22 +294,29 @@ function libMatch(d) {
   return { all: true, draft: st.stage === 0 && !isReturned(st), mine: needsMe(d), sub: st.stage >= 1 && st.stage <= 3, ok: st.stage === 4, ret: isReturned(st) }[ui.filter];
 }
 const monthOf = (t) => new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(new Date(t));
-// the search-and-filter bar, shared by the Events tab
-function filterBar(extra = "") {
+// the Events toolbar: search, filters, the view menu (List / Grid) and New event, in one bar
+function filterBar() {
   const tag = (k, l, grp, cur) => `<button type="button" class="tagbtn" role="radio" aria-checked="${cur === k}" data-${grp}="${k}">${l}</button>`;
-  const on = filtersOn(), sum = [ui.q.trim() && `“${ui.q.trim()}”`, ui.filter !== "all" && FILTERS.find((f) => f[0] === ui.filter)[1], ui.type !== "all" && TYPES_F.find((f) => f[0] === ui.type)[1]].filter(Boolean).join(" · ");
-  const bar = `<div class="lib-bar">${extra}<button class="ghost sm" type="button" id="libF" aria-expanded="${!!ui.showF}" aria-controls="libCtl"><svg class="i"><use href="#i-search"/></svg>${on ? "Filters on" : "Search and filter"}</button>
-      ${on ? `<span class="lib-sum">${esc(sum)}</span><button class="textbtn" type="button" id="libClear" style="margin:0">Clear</button>` : ""}</div>`;
-  const ctl = ui.showF ? `<div class="lib-ctl" id="libCtl">
-      <div class="search"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><input class="line-in" id="libQ" type="search" autocomplete="off" placeholder="Search events and documents" aria-label="Search events and documents" value="${esc(ui.q)}"></div>
+  const on = ui.filter !== "all" || ui.type !== "all", sum = [ui.filter !== "all" && FILTERS.find((f) => f[0] === ui.filter)[1], ui.type !== "all" && TYPES_F.find((f) => f[0] === ui.type)[1]].filter(Boolean).join(" · ");
+  const view = ui.evView === "list" ? "list" : "grid", VIEWS = [["list", "List", "i-list"], ["grid", "Grid", "i-grid"]];
+  const menu = ui.viewMenu ? `<div class="view-menu" id="viewMenu" role="menu" aria-label="View">${VIEWS.map(([k, l, i]) => `<button type="button" role="menuitemradio" aria-checked="${view === k}" data-evview="${k}"><svg class="i" aria-hidden="true"><use href="#${i}"/></svg>${l}</button>`).join("")}</div>` : "";
+  const bar = `<div class="ev-tools">
+      <div class="search ev-q"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><input id="libQ" type="search" autocomplete="off" placeholder="Search events and documents" aria-label="Search events and documents" value="${esc(ui.q)}"></div>
+      <button class="tool-btn${on ? " on" : ""}" type="button" id="libF" aria-expanded="${!!ui.showF}" aria-controls="libCtl" aria-label="Filters${on ? ", on" : ""}" title="Filters"><svg class="i" aria-hidden="true"><use href="#i-sliders"/></svg>${on ? '<span class="dot" aria-hidden="true"></span>' : ""}</button>
+      <div class="view-pick"><button class="tool-btn" type="button" id="viewBtn" aria-haspopup="menu" aria-expanded="${!!ui.viewMenu}" aria-label="View: ${view === "grid" ? "Grid" : "List"}" title="View"><svg class="i" aria-hidden="true"><use href="#i-${view}"/></svg><svg class="i caret" aria-hidden="true"><use href="#i-chev"/></svg></button>${menu}</div>
+      ${ui.evAdding ? "" : `<button class="key sm ev-addbtn" type="button" id="evAdd"><svg class="i"><use href="#i-plus"/></svg><span>New event</span></button>`}</div>`;
+  const ctl = ui.showF || on ? `<div class="lib-ctl" id="libCtl">${ui.showF ? `
       <div class="tags" role="radiogroup" aria-label="Status">${FILTERS.map(([k, l]) => tag(k, l, "flt", ui.filter)).join("")}</div>
-      <div class="tags" role="radiogroup" aria-label="Tool">${TYPES_F.map(([k, l]) => tag(k, l, "typ", ui.type)).join("")}</div></div>` : "";
+      <div class="tags" role="radiogroup" aria-label="Tool">${TYPES_F.map(([k, l]) => tag(k, l, "typ", ui.type)).join("")}</div>` : ""}
+      ${on ? `<div class="lib-on"><span class="lib-sum">Showing: ${esc(sum)}</span><button class="textbtn" type="button" id="libClear" style="margin:0">Clear</button></div>` : ""}</div>` : "";
   return `<section class="sheet lib-top">${bar}${ctl}</section>`;
 }
 document.addEventListener("input", (e) => { if (e.target.id === "libQ") { ui.q = e.target.value; keep(); $("#evList").innerHTML = eventsBody(); } });
 document.addEventListener("click", (e) => {
-  if (e.target.closest("#libF")) { ui.showF = !ui.showF; keep(); renderHub(); if (ui.showF) $("#libQ")?.focus(); return; }
-  if (e.target.closest("#libClear")) { ui.q = ""; ui.filter = "all"; ui.type = "all"; keep(); renderHub(); return; }
+  if (e.target.closest("#libF")) { ui.showF = !ui.showF; ui.viewMenu = false; keep(); renderHub(); $("#libF")?.focus(); return; }
+  if (e.target.closest("#viewBtn")) { ui.viewMenu = !ui.viewMenu; renderHub(); (ui.viewMenu ? $("#viewMenu [aria-checked=true]") : $("#viewBtn"))?.focus(); return; }
+  if (ui.viewMenu && !e.target.closest("#viewMenu")) { ui.viewMenu = false; renderHub(); }
+  if (e.target.closest("#libClear")) { ui.filter = "all"; ui.type = "all"; keep(); renderHub(); return; }
   const f = e.target.closest("[data-flt],[data-typ]");
   if (!f || !f.closest("#hub")) return;
   if (f.dataset.flt) ui.filter = f.dataset.flt; else ui.type = f.dataset.typ;
@@ -366,14 +375,15 @@ function eventDrop(e, x) {
   return `<ul class="ev-docs">${order.map((k) => parts[k]).join("")}</ul>${edit}`;
 }
 // an event's documents as one status bar (budget, liquidation, each certificate batch, each set of minutes)
-function eventBar(e, x) {
+function eventKinds(x) {
   const k = [];
   k.push(x.bp || (x.b && x.b.stage === 4) ? "done" : x.b ? (isReturned(x.b) ? "ret" : x.b.stage >= 1 ? "wait" : "prog") : "todo");
   k.push(x.lr && x.lr.e.stage === 4 ? "done" : x.lr && x.lr.e.stage >= 1 ? "wait" : x.lr && x.lr.e.items.length ? "prog" : "todo");
   x.certs.forEach((c) => k.push(String(c.names || "").trim() ? "done" : "prog"));
   x.mins.forEach((m) => k.push(m.final ? "done" : "prog"));
-  return `<div class="ev-bar">${statusBar(k)}</div>`;
+  return k;
 }
+const eventBar = (e, x) => `<div class="ev-bar">${statusBar(eventKinds(x))}</div>`;
 // the keys of every document that belongs to an event (to filter, and to find the ones with no event)
 function eventKeys(e, x) {
   return [x.b && "br:" + e.id, x.bp && "bp:" + x.bp.id, x.lr && "lr:" + x.lr.r.id, ...x.certs.map((c) => "ct:" + c.id), ...x.mins.map((m) => "mn:" + m.id)].filter(Boolean);
@@ -392,7 +402,10 @@ function eventsBody() {
   shown.sort((a, b) => (!a.e.date) - (!b.e.date) || (b.e.date || "").localeCompare(a.e.date || "") || a.e.name.localeCompare(b.e.name));
   const groups = [];
   for (const it of shown) { const m = dMonth(it.e.date), g = groups[groups.length - 1]; if (g && g.m === m) g.rows.push(it); else groups.push({ m, rows: [it] }); }
-  let html = groups.map((g) => `<section class="sheet">${band(g.m, plural(g.rows.length, "event", "events"))}<ul class="rows">${g.rows.map(({ e, x }) => {
+  const grid = ui.evView !== "list";
+  // grid: one continuous grid, newest first (each card shows its own date); List keeps the month bands
+  const gridHTML = () => (shown.length ? `<ul class="ev-grid">${shown.map(({ e, x }) => evCard(e, x)).join("")}</ul>` : "");
+  let html = grid ? gridHTML() : groups.map((g) => `<section class="sheet">${band(g.m, plural(g.rows.length, "event", "events"))}<ul class="rows">${g.rows.map(({ e, x }) => {
     const open = ui.evOpen === e.id;
     return `<li class="hrow single ev${open ? " open" : ""}"><button class="go ev-h" type="button" data-evtoggle="${e.id}" aria-expanded="${open}"><span><span class="nm">${esc(e.name)}</span><span class="mt">${esc([e.date ? dShort(e.date) : "", e.venue].filter(Boolean).join(" · ") || "No date or venue yet")}</span><span class="ts">${esc(eventSummary(e, x))}</span></span><svg class="i chev" aria-hidden="true"><use href="#i-chev"/></svg></button>${eventBar(e, x)}${open ? eventDrop(e, x) : ""}</li>`;
   }).join("")}</ul></section>`).join("");
@@ -405,7 +418,37 @@ function eventsBody() {
   }
   return html || `<section class="sheet"><p class="empty">Nothing matches. Try another status or clear the search.</p></section>`;
 }
+/* ---- grid view: a card per event, with its photo (or chapter blue and its initials) ---- */
+// "ACM-AUF Hackathon 2026" → AH, "Code in the Dark" → CD (capitalised words first)
+const evInitials = (n) => { const w = String(n).split(/\s+/), cap = w.filter((x) => /^[A-Z]/.test(x)), use = cap.length ? cap : w.filter((x) => /^[a-z]/i.test(x)); return use.map((x) => x[0].toUpperCase()).slice(0, 2).join("") || "•"; };
+const evMeta = (e) => [e.date ? dShort(e.date) : "", e.venue].filter(Boolean).join(" · ") || "No date or venue yet";
+// no photo yet: a date tile (day and month on a calendar), or the initials when there's no date
+function evPhoto(e, cls) {
+  const u = e.photo && PHOTOS.get(e.photo);
+  if (u) return `<span class="${cls} has" style="background-image:url('${u}')" aria-hidden="true"></span>`;
+  const d = e.date ? new Date(e.date + "T00:00") : null;
+  const face = d ? `<b>${d.getDate()}</b><span>${new Intl.DateTimeFormat("en-US", { month: "short" }).format(d)}</span>` : `<b class="ini">${esc(evInitials(e.name))}</b><span>No date</span>`;
+  return `<span class="${cls} none" aria-hidden="true"><span class="cal-tile"><svg class="cal-ic" viewBox="0 0 120 110"><rect x="6" y="14" width="108" height="90" rx="10"/><path d="M6 36h108M32 4v20M88 4v20"/></svg><span class="cal-face">${face}</span></span></span>`;
+}
+const ROW = (icon, text, cls = "") => `<span class="ev-li${cls ? " " + cls : ""}"><svg class="i" aria-hidden="true"><use href="#${icon}"/></svg><span>${esc(text)}</span></span>`;
+function evCard(e, x) {
+  return `<li><button class="ev-card" type="button" data-evpage="${e.id}">${evPhoto(e, "ev-ph")}${evRule(x)}<span class="ev-cb"><span class="nm">${esc(e.name)}</span>
+    ${ROW("i-cal", e.date ? dShort(e.date) : "No date yet")}${ROW("i-pin", e.venue || "No venue yet", e.venue ? "venue" : "muted")}${ROW("i-doc", eventSummary(e, x), "st")}</span></button></li>`;
+}
+// the coloured rule under a card's photo: its documents' status bar, full width
+const evRule = (x) => `<span class="ev-rule">${statusBar(eventKinds(x))}</span>`;
+/* the event page: photo banner, then its four tools (opened from a grid card) */
+function renderEventPage(e) {
+  const x = eventDocs(e), u = e.photo && PHOTOS.get(e.photo), officer = !signerRole();
+  const ctl = officer ? `<div class="ev-phctl"><button class="ghost sm" type="button" data-evphoto="${e.id}"><svg class="i"><use href="#i-camera"/></svg>${u ? "Change photo" : "Add photo"}</button>${u ? `<button class="ghost sm" type="button" data-evphotodel="${e.id}">Remove</button>` : ""}<input type="file" accept="image/*" id="evPhIn" data-ev="${e.id}" hidden></div>` : "";
+  return `<div class="ev-back"><button class="textbtn" type="button" data-evback="1"><svg class="i back" aria-hidden="true"><use href="#i-chev"/></svg>All events</button></div>
+    <section class="sheet ev-page"><div class="ev-banner-wrap">${evPhoto(e, "ev-banner")}${ctl}</div>
+      <div class="ev-pagehead"><h1 tabindex="-1">${esc(e.name)}</h1><p class="mt">${esc(evMeta(e))}</p><p class="ts">${esc(eventSummary(e, x))}</p>${eventBar(e, x)}</div>
+      ${eventDrop(e, x)}</section>`;
+}
 function renderEvents() {
+  const pg = ui.evPage && eventById(ui.evPage); if (pg) return renderEventPage(pg);
+  ui.evPage = null;
   const role = lensRole(), lens = (k, l) => `<button type="button" role="radio" data-lens="${k}" aria-checked="${role === k}"${role === k ? ' aria-current="page"' : ""}>${l}</button>`;
   const sw = signerRole() ? "" : `<div class="areas home-role" role="radiogroup" aria-label="Work as">${lens("treasurer", "Treasurer")}${lens("secretary", "Secretary")}</div>`;
   const head = titleBlock("Events", "Every activity", `<div class="who-row"><p class="who">${signerRole() ? "Tap an event to see its documents. Use Needs action to find what waits on you." : "Tap an event to open its documents, or start a draft for any of them."}</p>${sw}</div>`);
@@ -414,22 +457,30 @@ function renderEvents() {
         <div class="two"><div class="field"><label for="evNewD">Date</label><input class="line-in" id="evNewD" type="date"></div><div class="field"><label for="evNewV">Venue <span class="opt">(optional)</span></label><input class="line-in" id="evNewV" autocomplete="off" placeholder="e.g. EYA-CLI Laboratory"></div></div></div>
         <div class="m-foot"><button class="textbtn" type="button" id="evNewNo">Cancel</button><button class="ghost" type="button" id="evNewGo">Add event</button></div></section>`
     : "";
-  const bar = filterBar(ui.evAdding ? "" : `<button class="ghost sm" type="button" id="evAdd"><svg class="i"><use href="#i-plus"/></svg>New event</button>`);
+  const bar = filterBar();
   return head + bar + add + `<div class="lib-months" id="evList">${eventsBody()}</div>`;
 }
 document.addEventListener("click", (e) => {
   const c = (s) => e.target.closest(s); if (!e.target.closest("#hub")) return;
   const t = c("[data-evtoggle]"); if (t) { markSetup("events"); ui.evOpen = ui.evOpen === t.dataset.evtoggle ? null : t.dataset.evtoggle; ui.evEdit = null; keep(); renderHub(); document.querySelector(`[data-evtoggle="${t.dataset.evtoggle}"]`)?.focus(); return; }
+  const vb = c("[data-evview]"); if (vb) { ui.evView = vb.dataset.evview; ui.viewMenu = false; keep(); renderHub(); $("#viewBtn")?.focus(); return; }
+  const pgb = c("[data-evpage]"); if (pgb) { markSetup("events"); ui.evPage = pgb.dataset.evpage; ui.evOpen = ui.evPage; ui.evEdit = null; keep(); renderHub(); $("#hub").scrollTop = 0; $("#hubMain h1")?.focus({ preventScroll: true }); return; }
+  if (c("[data-evback]")) { const id = ui.evPage; ui.evPage = null; ui.evEdit = null; keep(); renderHub(); const card = document.querySelector(`[data-evpage="${id}"]`); card?.scrollIntoView({ block: "center" }); card?.focus({ preventScroll: true }); return; }
+  const ph = c("[data-evphoto]"); if (ph) { $("#evPhIn")?.click(); return; }
+  const pd = c("[data-evphotodel]"); if (pd) {
+    const ev = eventById(pd.dataset.evphotodel), old = ev.photo; updateEvent(ev.id, { photo: "" }); dropPhoto(old); renderHub();
+    TR.toast("Photo removed", () => { keepPhoto(old); updateEvent(ev.id, { photo: old }); renderHub(); }); return;
+  }
   if (c("#evAdd")) { ui.evAdding = true; renderHub(); $("#evNewN").focus(); return; }
   if (c("#evNewNo")) { ui.evAdding = false; renderHub(); return; }
   if (c("#evNewGo")) {
     const n = $("#evNewN").value.trim(); if (!n) { $("#evNewN").focus(); TR.toast("Give the event a name"); return; }
     const ev = addEvent({ name: n, date: $("#evNewD").value, venue: $("#evNewV").value });
-    ui.evAdding = false; ui.evOpen = ev.id; keep(); renderHub(); TR.toast("Event added"); return;
+    ui.evAdding = false; ui.evOpen = ev.id; if (ui.evView !== "list") ui.evPage = ev.id; keep(); renderHub(); $("#hub").scrollTop = 0; TR.toast("Event added"); return;
   }
   const ed = c("[data-evedit]"); if (ed) { ui.evEdit = ed.dataset.evedit; renderHub(); $("#evN").focus(); return; }
   const dn = c("[data-evdone]"); if (dn) { ui.evEdit = null; renderHub(); return; }
-  const dl = c("[data-evdel]"); if (dl) { const was = removeEvent(dl.dataset.evdel); ui.evOpen = null; ui.evEdit = null; keep(); renderHub(); TR.toast(`Deleted “${was.e.name}”`, () => { restoreEvent(was); ui.evOpen = was.e.id; renderHub(); }); return; }
+  const dl = c("[data-evdel]"); if (dl) { const was = removeEvent(dl.dataset.evdel); ui.evOpen = null; ui.evPage = null; ui.evEdit = null; keep(); renderHub(); TR.toast(`Deleted “${was.e.name}”`, () => { restoreEvent(was); ui.evOpen = was.e.id; renderHub(); }); return; }
   const ev = (k) => eventById(c(`[data-${k}]`).dataset[k.replace(/-([a-z])/g, (_, x) => x.toUpperCase())]);
   // signers go to the approval panel when a document is waiting on them
   const signer = (key) => { const d = signerRole() && doc(key); if (d && needsMe(d)) { markSetup("opened"); openPath(d); return true; } return false; };
@@ -442,6 +493,14 @@ document.addEventListener("click", (e) => {
   if (c("[data-evctnew]")) { const x = eventById(c("[data-evctnew]").dataset.evctnew); markSetup("started"); setView("cert"); newBatch({ event: x.name, date: x.date || todayISO(), evId: x.id }); return; }
   if (c("[data-evmn]")) { setView("sec"); openMinutes(c("[data-evmn]").dataset.evmn); return; }
 });
+// a new background photo for an event (shrunk and kept on this device, like proof photos)
+document.addEventListener("change", async (e) => {
+  if (e.target.id !== "evPhIn") return;
+  const f = e.target.files && e.target.files[0], ev = eventById(e.target.dataset.ev); if (!f || !ev) return;
+  try { const id = await addPhoto(f, 1600), old = ev.photo; updateEvent(ev.id, { photo: id }); if (old) dropPhoto(old); renderHub(); TR.toast("Photo added"); }
+  catch { TR.toast("That file couldn’t be read as a photo"); }
+});
+loadPhotos().then(() => { if (device.dataset.view === "hub" && ui.tab === "events") renderHub(); });
 document.addEventListener("input", (e) => {
   const id = ui.evEdit; if (!id || !e.target.closest(".ev-edit")) return;
   updateEvent(id, { name: $("#evN").value, date: $("#evD").value, venue: $("#evV").value, budgetDue: $("#evB").value });
@@ -482,7 +541,7 @@ document.addEventListener("click", (e) => {
   if (e.target.closest("#sideSearch")) { openSearch(); return; }
   if (!e.target.closest("#srch")) return;
   if (e.target.closest("[data-srchx]")) { closeSearch(); return; }
-  const ev = e.target.closest("[data-srchev]"); if (ev) { closeSearch(); ui.tab = "events"; ui.evOpen = ev.dataset.srchev; keep(); setView("hub"); $("#hub").scrollTop = 0; return; }
+  const ev = e.target.closest("[data-srchev]"); if (ev) { closeSearch(); ui.tab = "events"; ui.evOpen = ev.dataset.srchev; ui.evPage = ui.evView !== "list" ? ev.dataset.srchev : null; keep(); setView("hub"); $("#hub").scrollTop = 0; return; }
   const dd = e.target.closest("[data-srchdoc]"); if (dd) { closeSearch(); const d = doc(dd.dataset.srchdoc); if (d) d.open(); }
 });
 document.addEventListener("keydown", (e) => {
