@@ -45,8 +45,3 @@ docs/design/        design brief, UX map and research
 prototypes/archive/ earlier versions
 ```
 
-## Team
-
-Heaven (Lead), Jaeda, Nico, Jums. AUF-ACM Student Chapter.
-
-This repository is private because it contains real officer names, the chapter letterhead and real receipt data.
