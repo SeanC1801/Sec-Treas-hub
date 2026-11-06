@@ -1,4 +1,4 @@
-// The hub shell around the Treasurer flows: Sign in, Home, Tools, Library,
+// The hub shell around the Treasurer flows: Sign in, Events, Templates and guides,
 // Profile and the approval path panel. Front-end draft only: everything is
 // kept on this device until the backend exists (see docs/design/UX_MAP.md).
 import { TR } from "./prototype.js";
@@ -22,7 +22,7 @@ document.querySelectorAll(".hd-mark").forEach((a) => a.insertAdjacentHTML("after
 
 /* ---------------- UI state (per viewer convenience) ---------------- */
 const UI_KEY = "sectreas:ui:v1";
-const ui = Object.assign({ view: "hub", tab: "home", lens: "treasurer", q: "", filter: "all", type: "all" }, read(UI_KEY));
+const ui = Object.assign({ view: "hub", tab: "events", lens: "treasurer", q: "", filter: "all", type: "all" }, read(UI_KEY));
 function read(k) { try { return JSON.parse(localStorage.getItem(k) || "null") || {}; } catch { return {}; } }
 function keep() { try { localStorage.setItem(UI_KEY, JSON.stringify(ui)); } catch {} }
 
@@ -124,21 +124,15 @@ function openFlow(area, lrId) {
 addEventListener("hub:close", () => { setView("hub"); TR.toast("Saved. You’re back at the hub"); });
 $("#apphead .hd-mark")?.addEventListener("click", (e) => { e.preventDefault(); setView("hub"); });
 
-/* ---------------- hub chrome: Home · Library · Profile ---------------- */
-const TABS = [["home", "Home", "i-home"], ["events", "Events", "i-cal"], ["profile", "Profile", "i-user"]];
+/* ---------------- hub chrome: Events · Profile (Events is the landing page) ---------------- */
+const TABS = [["events", "Events", "i-cal"], ["profile", "Profile", "i-user"]];
 const signerRole = () => me().role === "president" || me().role === "adviser";
-/* the sidebar: brand, the three tabs, the role's two start buttons, and you */
+/* the sidebar: brand, search, the tabs, guides, and you. New drafts start inside each event */
 function renderChrome() {
   if (ui.tab === "library") ui.tab = "events"; // Library is now part of Events
-  if (!TABS.some((t) => t[0] === ui.tab) && ui.tab !== "guides") ui.tab = "home";
+  if (!TABS.some((t) => t[0] === ui.tab) && ui.tab !== "guides") ui.tab = "events";
   const u = me(), role = lensRole();
   const cur = (k) => (k === ui.tab ? ' aria-current="page"' : "");
-  // one "+ Create New", whose choices follow the role you're working as
-  const MENU = role === "secretary" ? [["minutes", "Minutes", "For a meeting"], ["certs", "Certificate batch", "For an event"]]
-    : [["br", "Budget request", "For an event"], ["lr", "Liquidation report", "For an event, before or after approval"]];
-  const create = signerRole() ? "" : `<div class="side-start">
-      <button class="key side-create" type="button" id="sideCreate" aria-expanded="${!!ui.createOpen}" aria-controls="createMenu" title="Create new"><svg class="i"><use href="#i-plus"/></svg><span class="lbl">Create New</span></button>
-      ${ui.createOpen ? `<div class="create-menu" id="createMenu" role="menu" aria-label="Create new">${MENU.map(([k, l, d]) => `<button type="button" role="menuitem" data-create="${k}"><b>${l}</b><span>${d}</span></button>`).join("")}</div>` : ""}</div>`;
   const min = !!ui.sideMin;
   device.classList.toggle("side-min", min);
   const initials = u.name.replace(/^(Ms\.|Mr\.)\s*/, "").split(/\s+/).filter((w) => /^[A-Z]/.test(w)).map((w) => w[0]).slice(0, 2).join("");
@@ -146,7 +140,6 @@ function renderChrome() {
       <button class="icon-btn side-min-btn" type="button" id="sideMin" aria-label="${min ? "Expand the sidebar" : "Collapse the sidebar"}" aria-pressed="${min}"><svg class="i"><use href="#i-collapse"/></svg></button></div>
     <button class="side-search" type="button" id="sideSearch" title="Search (${/Mac/.test(navigator.platform) ? "⌘" : "Ctrl"} K)"><svg class="i"><use href="#i-search"/></svg><span class="lbl">Search</span><kbd class="lbl">${/Mac/.test(navigator.platform) ? "⌘" : "Ctrl"} K</kbd></button>
     <nav class="side-nav" aria-label="Hub">${TABS.map(([k, l, i]) => `<button type="button" data-tab="${k}"${cur(k)} title="${l}"><svg class="i" aria-hidden="true"><use href="#${i}"/></svg><span class="lbl">${l}</span></button>`).join("")}</nav>
-    ${create}
     <div class="side-guides"><button type="button" data-tab="guides"${cur("guides")} title="Templates and guides"><svg class="i" aria-hidden="true"><use href="#i-book"/></svg><span class="lbl">Templates and guides</span></button></div>
     <div class="side-foot"><div class="me"><span class="av" aria-hidden="true">${esc(initials)}</span><span class="lbl"><b>${esc(u.name)}</b><span>${esc(ROLES[u.role])}</span></span></div><button class="icon-btn" type="button" id="sideOut" aria-label="Sign out" title="Sign out"><svg class="i"><use href="#i-out"/></svg></button></div>`;
 }
@@ -159,16 +152,8 @@ $("#sideScrim").addEventListener("click", () => closeSide());
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("#side").classList.contains("open")) closeSide(); });
 $("#side").addEventListener("click", (e) => {
   const c = (s) => e.target.closest(s);
-  const t = c("[data-tab]"); if (t) { ui.tab = t.dataset.tab; ui.pick = null; keep(); closeSide(false); renderHub(); $("#hub").scrollTop = 0; $("#hubMain h1")?.focus?.(); return; }
-  if (c("#sideMin")) { ui.sideMin = !ui.sideMin; ui.createOpen = false; keep(); renderChrome(); $("#sideMin").focus(); return; }
-  if (c("#sideCreate")) { if (ui.sideMin) { ui.sideMin = false; ui.createOpen = true; keep(); renderChrome(); $("#createMenu button")?.focus(); return; } /* collapsed: open the sidebar to show the choices */
-    ui.createOpen = !ui.createOpen; keep(); renderChrome(); $(ui.createOpen ? "#createMenu button" : "#sideCreate")?.focus(); return; }
-  const cr = c("[data-create]"); if (cr) {
-    closeSide(false); markSetup("started"); ui.createOpen = false;
-    const k = cr.dataset.create;
-    if (k === "minutes") { keep(); setView("sec"); newMinutes(true); return; }
-    ui.tab = "home"; ui.pick = k; keep(); renderHub(); $("#hub").scrollTop = 0; $(".start-pick button, .start-pick input")?.focus(); return;
-  }
+  const t = c("[data-tab]"); if (t) { ui.tab = t.dataset.tab; keep(); closeSide(false); renderHub(); $("#hub").scrollTop = 0; $("#hubMain h1")?.focus?.(); return; }
+  if (c("#sideMin")) { ui.sideMin = !ui.sideMin; keep(); renderChrome(); $("#sideMin").focus(); return; }
   if (c("#sideOut")) { closeSide(false); setSession(null); TR.toast("Signed out"); setView("signin"); }
 });
 document.addEventListener("click", (e) => {
@@ -182,7 +167,7 @@ function titleBlock(kicker, h1, extra = "") {
 }
 function renderHub() {
   renderChrome();
-  const T = { home: renderHome, events: renderEvents, profile: renderProfile, guides: renderGuides }[ui.tab] || renderHome;
+  const T = { events: renderEvents, profile: renderProfile, guides: renderGuides }[ui.tab] || renderEvents;
   $("#hubMain").innerHTML = T();
 }
 
@@ -201,9 +186,7 @@ document.addEventListener("click", (e) => {
   if (tl) { openTool(tl.dataset.tool); }
 });
 
-/* ---- Home: your tools, then what's waiting on you ---- */
-const hello = () => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; };
-const firstName = (n) => (ORG.nick && ORG.nick[n]) || String(n).replace(/^(Ms\.|Mr\.|Mrs\.|Dr\.)\s*/i, "").split(" ")[0];
+/* ---- tools: open each one's list ---- */
 const TOOLS = {
   br: ["Budget Requests", "Letter, program flow and budget breakdown for the CSC."],
   lr: ["Liquidation Reports", "Receipts per event, with the first semester tracker."],
@@ -238,11 +221,11 @@ function toolStatus(k) {
   if (k === "certs") return plural(certList().length, "batch", "batches");
   return "";
 }
-// a coloured heading band (Events and Profile; Home uses plain ledger headings)
+// a coloured heading band (Events and Profile)
 const bandK = (kind, title, right = "") => `<div class="sheet-h band ${kind}"><h2>${esc(title)}</h2>${right ? `<span>${esc(right)}</span>` : ""}</div>`;
 const lensRole = () => (signerRole() ? me().role : ui.lens);
 
-/* ================= Home (agreed 2026-11-06, docs/design/HOME_PLAN_2026-11.md §9) ================= */
+/* ---- dates and due dates (Home was retired 2026-11-07; Events is the landing page) ---- */
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const addDays = (iso, n) => { const d = new Date(iso + "T00:00"); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const evOf = (d) => eventById(d.ev || d.id);
@@ -260,110 +243,21 @@ function groupOf(due) {
 }
 const dueText = (due) => { if (!due) return ""; const g = groupOf(due); return g === "over" ? `was due ${dShort(due)}` : g === "today" ? "due today" : `due ${dShort(due)}`; };
 
-/* what this person should do, each with its due date; plus what's waiting on others (Copy link) */
-function todos() {
-  const u = me(), all = docs(), T = [], W = [];
-  const add = (d, verb, why, act) => T.push({ d, verb, why, act, due: dueOf(d) });
-  if (signerRole()) {
-    all.filter(needsMe).forEach((d) => add(d, u.role === "president" ? "Sign" : "Note", `${d.type} · waiting for your ${u.role === "president" ? "signature" : "note"}`, `data-path="${d.key}"`));
-  } else if (lensRole() === "treasurer") {
-    for (const d of all.filter((x) => x.kind === "br" || x.kind === "lr")) {
-      const st = d.st(), sg = st.stage;
-      if (isReturned(st)) {
-        const l = lastLog(st), note = (l.note || "").replace(/^Returned:?\s*/, "");
-        add(d, "Fix and resend", `${d.type} · returned by ${l.by}${note ? `: “${note}”` : ""}`, `data-open="${d.key}"`);
-      } else if (sg === 3) add(d, "Record the CSC’s approval", `${d.type} · with the CSC`, `data-path="${d.key}"`);
-      else if (sg === 0 && d.kind === "lr") {
-        const e = TR.evData(d.id), due = dueOf(d), happened = !due || due <= addDays(todayISO(), 1);
-        if (e.r.provisional) add(d, "Add receipts", "Liquidation draft · send it once the budget is approved", `data-open="${d.key}"`);
-        else if (e.items.length) add(d, "Finish and send", `Liquidation report · ${d.meta}`, `data-open="${d.key}"`);
-        else if (due && happened) add(d, "Liquidate", `Budget approved · the event was ${dShort(evOf(d).date)}`, `data-open="${d.key}"`);
-      } else if (sg === 0 && d.kind === "br") {
-        const b = d.st(), need = b.items.filter((i) => !(Number(i.amt) > 0)).length;
-        add(d, b.items.length ? "Finish and send" : "Add budget lines", b.items.length ? (need ? `Budget request · ${plural(need, "line needs", "lines need")} an amount` : "Budget request · ready to send to the President") : "Budget request · no lines yet", `data-open="${d.key}"`);
-      } else if (sg >= 1 && sg <= 2) W.push(d);
-    }
-  } else {
-    minutesList().filter((m) => !m.final).forEach((m) => { const d = all.find((x) => x.key === "mn:" + m.id); add(d, "Finish minutes", "Minutes · not marked final yet", `data-open="mn:${m.id}"`); });
-    certList().filter((c) => !String(c.names || "").trim()).forEach((c) => {
-      const d = all.find((x) => x.key === "ct:" + c.id), e = c.evId && eventById(c.evId);
-      T.push({ d, verb: "Add names", why: "Certificates · no names yet", act: `data-open="ct:${c.id}"`, due: e && e.date ? e.date : "" });
-    });
-  }
-  // most urgent first: by group, then returned first, then by due date
-  const rank = (t) => GROUPS.findIndex((g) => g[0] === groupOf(t.due));
-  T.sort((a, b) => rank(a) - rank(b) || (b.verb === "Fix and resend") - (a.verb === "Fix and resend") || (a.due || "9").localeCompare(b.due || "9"));
-  return { T, W };
-}
-const todoRow = (t) => `<li class="hrow single"><button class="go todo" type="button" ${t.act}><span><span class="nm"><span class="verb">${esc(t.verb)}</span> · ${esc(t.d.title)}</span><span class="mt">${esc(t.why)}${t.due ? ` · <span class="due ${groupOf(t.due)}">${esc(dueText(t.due))}</span>` : ""}</span></span><svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></button></li>`;
-const waitRow = (d) => { const who = { 1: ORG.president, 2: ORG.adviser }[stageOf(d)];
-  return `<li class="hrow"><button class="go" type="button" data-path="${d.key}"><span><span class="nm">${esc(d.title)}</span><span class="mt">${esc(d.type)} · with ${esc(who || "the signatory")}</span></span></button><button class="stbtn copy" type="button" data-copy="${d.key}" aria-label="Copy a link to ${esc(d.title)}">Copy link</button></li>`; };
-
-/* things I finished today (from the status logs and minutes), for the Done today tray */
-function doneToday() {
-  const u = me(), t0 = new Date(todayISO() + "T00:00").getTime(), out = [];
-  const SAID = { 1: "Sent to the President", 2: "Signed", 3: "Noted", 4: "Recorded the CSC’s approval" };
-  for (const d of docs()) {
-    if (d.kind === "mn") { const m = minutesList().find((x) => x.id === d.id); if (m && m.final && m.finalAt >= t0 && m.finalBy === u.name) out.push({ id: d.key + m.finalAt, at: m.finalAt, what: d.title, how: "Marked final" }); continue; }
-    const st = d.st(); if (!st || !st.log) continue;
-    st.log.filter((x) => x.at >= t0 && x.by === u.name && x.to > 0).forEach((x) => out.push({ id: d.key + x.at, at: x.at, what: d.title, how: SAID[x.to] }));
-  }
-  return out.sort((a, b) => b.at - a.at);
-}
-/* changes by other people since my last visit */
-let LAST_VISIT = ui.lastSeen || 0;
-ui.lastSeen = Date.now(); keep();
-function sinceLast() {
-  const u = me(), out = [];
-  const DID = { 0: "returned", 1: "sent", 2: "signed", 3: "noted", 4: "recorded the CSC’s approval of" };
-  for (const d of docs()) {
-    if (d.kind === "mn") { const m = minutesList().find((x) => x.id === d.id); if (m && m.finalAt > LAST_VISIT && m.finalBy && m.finalBy !== u.name) out.push({ at: m.finalAt, text: `${m.finalBy} finished the ${d.title.replace("Meeting, ", "")} minutes` }); continue; }
-    const st = d.st(); if (!st || !st.log) continue;
-    st.log.filter((x) => x.at > LAST_VISIT && x.by !== u.name && !/^Unsent/.test(x.note || "")).forEach((x) => out.push({ at: x.at, text: `${x.by} ${DID[x.to]} the ${d.title} ${d.kind === "lr" ? "liquidation" : "budget"}` }));
-  }
-  return out.sort((a, b) => b.at - a.at).slice(0, 3);
-}
-
-/* an event's four documents as a small ledger strip: not started (pencil) / in progress (ink) / done (stamped) */
-function strip(e) {
-  const x = eventDocs(e), mark = (k, label, s) => `<span class="mk ${s}" title="${label}: ${{ todo: "not started", prog: "in progress", done: "done" }[s]}"><b>${k}</b><span class="sr">${label}: ${{ todo: "not started", prog: "in progress", done: "done" }[s]}</span></span>`;
-  const b = x.bp || (x.b && x.b.stage === 4) ? "done" : x.b ? "prog" : "todo";
-  const l = x.lr && x.lr.e.stage === 4 ? "done" : x.lr && x.lr.e.items.length ? "prog" : "todo";
-  const c = x.certs.length ? (x.certs.every((v) => String(v.names || "").trim()) ? "done" : "prog") : "todo";
-  const m = x.mins.length ? (x.mins.every((v) => v.final) ? "done" : "prog") : "todo";
-  return `<span class="strip">${mark("B", "Budget request", b)}${mark("L", "Liquidation", l)}${mark("C", "Certificates", c)}${mark("M", "Minutes", m)}</span>`;
-}
-
-/* first-run checklist, per person */
-function setupState() {
-  const u = me(), s = (ui.setup || {})[u.name] || {};
-  const steps = [["Sign in", true], ["Check the signatories in Profile", !!s.profile], ["Open an event in Events", !!s.events], [signerRole() ? "Open a document from your to-do list" : "Start your first document", signerRole() ? !!s.opened : !!s.started]];
-  return { steps, done: steps.filter((x) => x[1]).length, skipped: !!s.skip };
-}
 const markSetup = (k) => { const n = me().name; ui.setup = { ...(ui.setup || {}), [n]: { ...((ui.setup || {})[n] || {}), [k]: true } }; keep(); };
 
 const GUIDE = {
-  treasurer: ["Start a budget request for an event and send it to the President when every line has an amount.",
+  treasurer: ["Open an event in Events and tap Budget Request to start its draft. Send it to the President when every line has an amount.",
     "It goes to the President, then the Adviser, then the CSC. When the CSC approves, record it here.",
     "The day after the event, liquidate it: add each receipt, and the winners’ IDs if there were cash prizes.",
     "Send the liquidation report the same way. Finished documents live in Events."],
   secretary: ["After each meeting, write the minutes: details, attendance, notes and action items. Mark them final when done.",
-    "Before an event, start its certificates and paste the names.",
+    "Before an event, open it in Events, tap Certificates to start a batch, and paste the names.",
     "Check each name in the preview, then print all as one PDF.",
     "Finished minutes and certificates live in Events, under their event."],
-  president: ["Documents waiting for your signature show in your to-do list.", "Open one, check it, then mark it as signed or return it with a note.", "Events shows where every document stands."],
-  adviser: ["Documents waiting for your note show in your to-do list.", "Open one, check it, then mark it as noted or return it with a note.", "Events shows where every document stands."],
+  president: ["In Events, tap Needs action to see the documents waiting for your signature.", "Open one, check it, then mark it as signed or return it with a note.", "Events shows where every document stands."],
+  adviser: ["In Events, tap Needs action to see the documents waiting for your note.", "Open one, check it, then mark it as noted or return it with a note.", "Events shows where every document stands."],
 };
-const semester = (d = new Date()) => { const m = d.getMonth(); return m >= 7 ? "1st semester" : m <= 4 ? "2nd semester" : "Summer"; };
-const ledgerH = (title, count, cls = "") => `<div class="hl${cls ? " " + cls : ""}"><h2>${esc(title)}</h2>${count != null ? `<span class="cnt">${esc(count)}</span>` : ""}</div>`;
 
-// what kind of work a to-do is, for the status bar: not started / in progress / waiting / returned
-function kindOfTodo(t) {
-  if (t.verb === "Fix and resend") return "ret";
-  if (/^(Sign|Note|Record)/.test(t.verb)) return "wait";
-  if (/^(Add budget lines|Liquidate|Add names)$/.test(t.verb)) return "todo";
-  return "prog";
-}
 const KIND = { todo: ["not started", "pencil"], prog: ["in progress", "ink"], wait: ["waiting on a signature", "cyan"], ret: ["returned", "sun"], done: ["done", "leaf"] };
 // a thin bar showing how a group splits by status, with the same in words for screen readers
 function statusBar(kinds) {
@@ -373,57 +267,6 @@ function statusBar(kinds) {
   const words = order.map((k) => `${n[k]} ${KIND[k][0]}`).join(", ");
   return `<span class="sbar" role="img" aria-label="${esc(words)}" title="${esc(words)}">${order.map((k) => `<span class="${KIND[k][1]}" style="flex:${n[k]}"></span>`).join("")}</span>`;
 }
-function renderHome() {
-  const u = me(), role = lensRole(), now = new Date();
-  const dateLine = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(now) + " · " + semester(now);
-  const lens = (k, l) => `<button type="button" role="radio" data-lens="${k}" aria-checked="${role === k}"${role === k ? ' aria-current="page"' : ""}>${l}</button>`;
-  const sw = signerRole() ? "" : `<div class="areas home-role" role="radiogroup" aria-label="Show work for">${lens("treasurer", "Treasurer")}${lens("secretary", "Secretary")}</div>`;
-  const head = titleBlock(dateLine, firstName(u.name), `<div class="who-row"><p class="who">${esc(ROLES[u.role])}</p>${sw}</div>`);
-  // To do
-  const { T, W } = todos(), D = doneToday(), stamped = new Set(ui.stamped || []);
-  // counts that filter the list (monday.com's count tiles, kept small and useful)
-  const isRet = (t) => t.verb === "Fix and resend", isDraft = (t) => kindOfTodo(t) !== "wait" && !isRet(t);
-  const F = [["all", "All", T.length + W.length], ["drafts", "Drafts", T.filter(isDraft).length], ["waiting", "Waiting", W.length + T.filter((t) => kindOfTodo(t) === "wait").length], ["returned", "Returned", T.filter(isRet).length], ["done", "Done today", D.length]];
-  const hf = F.some((f) => f[0] === ui.homeFilter) ? ui.homeFilter : "all";
-  const counts = `<div class="counts" role="radiogroup" aria-label="Show">${F.map(([k, l, n]) => `<button type="button" role="radio" aria-checked="${hf === k}" data-hf="${k}"><b>${n}</b><span>${l}</span></button>`).join("")}</div>`;
-  const keepT = (t) => hf === "all" || (hf === "drafts" && isDraft(t)) || (hf === "returned" && isRet(t)) || (hf === "waiting" && kindOfTodo(t) === "wait");
-  const TT = hf === "done" ? [] : T.filter(keepT), WW = hf === "all" || hf === "waiting" ? W : [];
-  // groups fold away (remembered); each has a status bar
-  const off = new Set(ui.grpOff || []);
-  const grp = (id, label, items, rowFn, kinds) => {
-    const closed = off.has(id), bar = statusBar(kinds);
-    return `<li class="grp-h ${id}"><button type="button" data-grp="${id}" aria-expanded="${!closed}"><svg class="i chev" aria-hidden="true"><use href="#i-chev"/></svg><span class="gl">${label}</span><span class="gn">${items.length}</span></button>${bar}</li>` + (closed ? "" : items.map(rowFn).join(""));
-  };
-  let rows = "";
-  for (const [g, label] of GROUPS) { const ts = TT.filter((t) => groupOf(t.due) === g); if (ts.length) rows += grp(g, label, ts, todoRow, ts.map(kindOfTodo)); }
-  if (WW.length) rows += grp("waitg", "Waiting on others", WW, waitRow, WW.map(() => "wait"));
-  const doneRows = D.map((x) => `<li class="done-row"><span class="tick" aria-hidden="true">✓</span><span><span class="nm">${esc(x.how)} · ${esc(x.what)}</span><span class="mt">${new Intl.DateTimeFormat("en-PH", { hour: "numeric", minute: "2-digit" }).format(new Date(x.at))}</span></span><span class="mini-stamp${stamped.has(x.id) ? "" : " fresh"}" aria-label="Done">DONE</span></li>`).join("");
-  ui.stamped = [...new Set([...(ui.stamped || []), ...D.map((x) => x.id)])].slice(-50); keep();
-  const todo = `<section class="sheet home-block">${ledgerH("To do", T.length ? String(T.length) : null, "todo")}
-    ${counts}
-    ${rows ? `<ul class="rows">${rows}</ul>` : hf !== "done" ? `<p class="empty">${hf === "all" ? "Nothing needs you right now." : "Nothing here. Tap All to see everything."}</p>` : ""}
-    ${signerRole() ? "" : `<div class="todo-add"><button class="textbtn" type="button" data-opencreate="1"><svg class="i"><use href="#i-plus"/></svg>Create New</button></div>`}
-    ${D.length && (hf === "all" || hf === "done") ? `<div class="done-tray"><div class="hl sub"><h3>Done today</h3></div><ul class="rows">${doneRows}</ul></div>` : ""}</section>`;
-  // Coming up: next 3 events with a date
-  const t = todayISO(), soon = eventList().filter((e) => e.date && e.date >= t).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3);
-  const coming = `<section class="sheet home-block">${ledgerH("Coming up")}${soon.length ? `<ul class="rows">${soon.map((e) => `<li class="hrow single"><button class="go" type="button" data-goevent="${e.id}"><span><span class="nm">${esc(e.name)}</span><span class="mt">${esc(dShort(e.date))}${e.venue ? " · " + esc(e.venue) : ""}</span></span>${strip(e)}</button></li>`).join("")}</ul>` : `<p class="empty">No dated events ahead. Add dates in Events.</p>`}</section>`;
-  // Since you were last here
-  const S2 = sinceLast();
-  const since = S2.length ? `<section class="sheet home-block">${ledgerH("Since you were last here")}<ul class="rows since">${S2.map((x) => `<li><span class="nm">${esc(x.text)}</span><span class="mt">${esc(when(x.at))}</span></li>`).join("")}</ul></section>` : "";
-  // Start something: chosen from the sidebar; the event picker opens here, at the top
-  const pick = ui.pick === "br" ? [`Start a budget request`, evPick("data-brfor", eventList().filter((e) => { const x = eventDocs(e); return !x.b && !x.bp; }), "Every event already has a budget request.") + newEvForm("br")]
-    : ui.pick === "lr" ? [`Start a liquidation report`, `<p class="lede">You can start before the budget is approved and send it once it is.</p>` + evPick("data-lrfor", eventList().filter((e) => { const x = eventDocs(e); return !(x.lr && (x.lr.e.items.length || x.lr.e.stage)); }), "Every event already has a liquidation report.") + newEvForm("lr") + `<div class="start-more"><button class="textbtn" type="button" data-tool="lr">Open the semester tracker</button></div>`]
-    : ui.pick === "certs" ? [`Start a certificate batch`, evPick("data-ctfor", eventList(), "No events yet.") + newEvForm("certs")] : null;
-  const start = pick ? `<section class="sheet home-block start-sheet">${ledgerH(pick[0])}<div class="start-pick">${pick[1]}</div></section>` : "";
-  // Get set up (first run only)
-  const su = setupState();
-  const setup = su.skipped || su.done === su.steps.length ? "" : `<section class="sheet home-block">${ledgerH("Get set up", `${su.done} of ${su.steps.length}`)}<ul class="setup">${su.steps.map(([l, ok]) => `<li class="${ok ? "ok" : ""}"><span class="box" aria-hidden="true">${ok ? "✓" : ""}</span><span>${esc(l)}</span><span class="sr">${ok ? "done" : "not done"}</span></li>`).join("")}</ul><div class="pf-foot"><span></span><button class="textbtn" type="button" id="setupSkip">Skip</button></div></section>`;
-  return head + `<div class="home-grid"><div class="home-main">${start}${setup}${todo}</div><div class="home-side">${coming}${since}</div></div>`;
-}
-const evPick = (attr, list, none) => list.length
-  ? `<p class="lede">For which event?</p><ul class="ev-docs">${list.map((e) => `<li><button class="ev-doc" type="button" ${attr}="${e.id}"><span><span class="k">${esc(e.name)}</span><span class="s">${esc(e.date ? dShort(e.date) : "No date yet")}</span></span></button></li>`).join("")}</ul>`
-  : `<p class="empty">${none}</p>`;
-const newEvForm = (k) => `<div class="ev-edit tn"><div class="field"><label for="tnN">Or a new event</label><input class="line-in" id="tnN" autocomplete="off" placeholder="e.g. Christmas Party"></div><div class="two"><div class="field"><label for="tnD">Date</label><input class="line-in" id="tnD" type="date"></div><div class="field"><label for="tnV">Venue <span class="opt">(optional)</span></label><input class="line-in" id="tnV" autocomplete="off"></div></div><div class="m-foot" style="margin-top:0"><button class="textbtn" type="button" id="pickNo">Cancel</button><button class="ghost sm" type="button" data-tnew="${k}">Start for this new event</button></div></div>`;
 async function copyLink(key) {
   const url = location.origin + location.pathname + "#doc=" + encodeURIComponent(key);
   try { await navigator.clipboard.writeText(url); TR.toast("Link copied. Paste it in the group chat"); }
@@ -431,27 +274,7 @@ async function copyLink(key) {
 }
 document.addEventListener("click", (e) => {
   const c = (s) => e.target.closest(s); if (!e.target.closest("#hub")) return;
-  const hfb = c("[data-hf]"); if (hfb) { ui.homeFilter = ui.homeFilter === hfb.dataset.hf && hfb.dataset.hf !== "all" ? "all" : hfb.dataset.hf; keep(); renderHub(); document.querySelector(`[data-hf="${ui.homeFilter}"]`)?.focus(); return; }
-  const gb = c("[data-grp]"); if (gb) { const o = new Set(ui.grpOff || []), k = gb.dataset.grp; o.has(k) ? o.delete(k) : o.add(k); ui.grpOff = [...o]; keep(); renderHub(); document.querySelector(`[data-grp="${k}"]`)?.focus(); return; }
-  if (c("[data-opencreate]")) { ui.sideMin = false; ui.createOpen = true; keep(); renderChrome(); if (matchMedia("(max-width: 959px)").matches || device.clientWidth < 960) openSide(); $("#createMenu button")?.focus(); return; }
   const cp = c("[data-copy]"); if (cp) { e.stopPropagation(); copyLink(cp.dataset.copy); return; }
-  if (c("#setupSkip")) { markSetup("skip"); renderHub(); return; }
-  const pf = c("[data-pickfor]"); if (pf) { ui.pick = ui.pick === pf.dataset.pickfor ? null : pf.dataset.pickfor; renderHub(); return; }
-  if (c("#pickNo")) { ui.pick = null; renderHub(); return; }
-  if (c("[data-brfor],[data-lrfor],[data-ctfor],[data-tnew],[data-mnnew]")) markSetup("started");
-  const lf = c("[data-lrfor]"); if (lf) { const x = eventById(lf.dataset.lrfor); ui.pick = null; TR.ensureReq(x.id, { name: x.name, date: x.date, venue: x.venue }); TR.BACK.hub = true; openFlow("liq", x.id); return; }
-  const bf = c("[data-brfor]"); if (bf) { const x = eventById(bf.dataset.brfor); ui.pick = null; openBR(x.id, { name: x.name, date: x.date, venue: x.venue }); return; }
-  const cf = c("[data-ctfor]"); if (cf) { const x = eventById(cf.dataset.ctfor); ui.pick = null; setView("cert"); newBatch({ event: x.name, date: x.date || todayISO(), evId: x.id }); return; }
-  const tn = c("[data-tnew]"); if (tn) {
-    const n = $("#tnN").value.trim(); if (!n) { $("#tnN").focus(); TR.toast("Give the new event a name"); return; }
-    const x = addEvent({ name: n, date: $("#tnD").value, venue: $("#tnV").value }); ui.pick = null;
-    if (tn.dataset.tnew === "br") openBR(x.id, { name: x.name, date: x.date, venue: x.venue });
-    else if (tn.dataset.tnew === "lr") { TR.ensureReq(x.id, { name: x.name, date: x.date, venue: x.venue }); TR.BACK.hub = true; openFlow("liq", x.id); }
-    else { setView("cert"); newBatch({ event: x.name, date: x.date || todayISO(), evId: x.id }); }
-    return;
-  }
-  if (c("[data-mnnew]")) { setView("sec"); newMinutes(true); return; }
-  const ge = c("[data-goevent]"); if (ge) { ui.tab = "events"; ui.evOpen = ge.dataset.goevent; markSetup("events"); keep(); renderHub(); $("#hub").scrollTop = 0; return; }
   if (c("[data-open],[data-path]") && signerRole()) markSetup("opened");
 });
 
@@ -513,18 +336,24 @@ function eventSummary(e, x) {
 }
 const docBtn = (attrs, label, sub, status, cls = "") => `<li><button class="ev-doc" type="button" ${attrs}><span><span class="k">${esc(label)}</span><span class="s">${esc(sub)}</span></span>${status ? `<span class="stbtn ${cls}" style="text-decoration:none">${esc(status)}</span>` : ""}</button></li>`;
 const addBtn = (attrs, label) => `<li><button class="ev-doc add" type="button" ${attrs}><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg><span class="k">${esc(label)}</span></button></li>`;
+// a tool that has nothing yet: tap to start its draft (for the officer whose tool it is)
+const startBtn = (attrs, label, sub) => `<li><button class="ev-doc start" type="button" ${attrs}><span><span class="k">${esc(label)}</span><span class="s">${esc(sub)}</span></span><span class="stbtn start" style="text-decoration:none"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg>Start draft</span></button></li>`;
+const OWNER = { br: "treasurer", lr: "treasurer", certs: "secretary", mins: "secretary" };
+const canStart = (k) => !signerRole() && lensRole() === OWNER[k];
+const notYet = (k, what) => canStart(k) ? what : `${what} · ${OWNER[k] === "treasurer" ? "the Treasurer’s" : "the Secretary’s"} tool`;
+const withDue = (t, due) => (due ? `${t} · ${dueText(due)}` : t);
 const noteRow = (label, sub) => `<li><div class="ev-doc off"><span><span class="k">${esc(label)}</span><span class="s">${esc(sub)}</span></span></div></li>`;
 function eventDrop(e, x) {
   const parts = {
-    br: x.b ? docBtn(`data-evbr="${e.id}"`, "Budget Request", [x.b.d.date ? dShort(x.b.d.date) : "No date yet", x.b.items.length ? peso(x.b.items.reduce((a, i) => a + (Number(i.amt) || 0), 0)) : "No lines yet"].join(" · "), brLabel(x.b), isReturned(x.b) ? "ret" : "s" + x.b.stage)
+    br: x.b ? docBtn(`data-evbr="${e.id}"`, "Budget Request", [x.b.d.date ? dShort(x.b.d.date) : "No date yet", x.b.items.length ? peso(x.b.items.reduce((a, i) => a + (Number(i.amt) || 0), 0)) : "No lines yet", x.b.stage === 0 && brDue(e) ? dueText(brDue(e)) : ""].filter(Boolean).join(" · "), brLabel(x.b), isReturned(x.b) ? "ret" : "s" + x.b.stage)
       : x.bp ? docBtn(`data-path="bp:${x.bp.id}"`, "Budget Request", `Approved${x.bp.approved ? " " + x.bp.approved : ""} · ${peso(TR.reqTot(x.bp))}`, "Approved", "s4")
-      : noteRow("Budget Request", "Not started · use + Create New in the sidebar"),
-    lr: x.lr ? docBtn(`data-evlr="${e.id}"`, "Liquidation Report", x.lr.r.provisional ? `Draft · budget not approved yet` : x.lr.e.items.length ? `${peso(x.lr.e.items.reduce((a, b) => a + TR.lTot(b), 0))} of ${peso(TR.evAllot(x.lr.r))}` : `Not started · ${peso(TR.evAllot(x.lr.r))} allotted`, x.lr.e.items.length ? STAGE[x.lr.e.stage].b : "Start", "s" + x.lr.e.stage)
-      : noteRow("Liquidation Report", "Not started · use + Create New in the sidebar"),
+      : canStart("br") ? startBtn(`data-evbrnew="${e.id}"`, "Budget Request", withDue("Not started", brDue(e))) : noteRow("Budget Request", notYet("br", "Not started")),
+    lr: x.lr ? docBtn(`data-evlr="${e.id}"`, "Liquidation Report", x.lr.r.provisional ? `Draft · budget not approved yet` : x.lr.e.items.length ? `${peso(x.lr.e.items.reduce((a, b) => a + TR.lTot(b), 0))} of ${peso(TR.evAllot(x.lr.r))}` : `Not started · ${peso(TR.evAllot(x.lr.r))} allotted`, x.lr.e.items.length ? STAGE[x.lr.e.stage].b : x.lr.r.provisional ? "Draft" : "Start", "s" + x.lr.e.stage)
+      : canStart("lr") ? startBtn(`data-evlrnew="${e.id}"`, "Liquidation Report", withDue("Not started", lrDue(e))) : noteRow("Liquidation Report", notYet("lr", "Not started")),
     certs: x.certs.map((c) => { const n = String(c.names || "").split("\n").filter((v) => v.trim()).length; return docBtn(`data-evct="${c.id}"`, "Certificates · " + CERT_TYPES[c.type].label, plural(n, "name", "names"), n ? "Ready" : "No names", n ? "s4" : "s0"); }).join("")
-      + (x.certs.length ? "" : noteRow("Certificates", "None yet · use + Create New in the sidebar")),
-    mins: x.mins.length ? x.mins.map((m) => docBtn(`data-evmn="${m.id}"`, `Minutes · Meeting, ${dShort(m.date)}`, "Talks about this event", m.final ? "Final" : "Draft", m.final ? "s4" : "s0")).join("")
-      : noteRow("Minutes", "Not discussed in any minutes yet"),
+      + (canStart("certs") ? (x.certs.length ? addBtn(`data-evctnew="${e.id}"`, "Another certificate batch") : startBtn(`data-evctnew="${e.id}"`, "Certificates", "None yet")) : x.certs.length ? "" : noteRow("Certificates", notYet("certs", "None yet"))),
+    mins: x.mins.map((m) => docBtn(`data-evmn="${m.id}"`, `Minutes · Meeting, ${dShort(m.date)}`, "Talks about this event", m.final ? "Final" : "Draft", m.final ? "s4" : "s0")).join("")
+      + (canStart("mins") ? (x.mins.length ? addBtn(`data-evmnnew="${e.id}"`, "Minutes for another meeting") : startBtn(`data-evmnnew="${e.id}"`, "Minutes", "Not discussed in any minutes yet")) : x.mins.length ? "" : noteRow("Minutes", notYet("mins", "Not discussed in any minutes yet"))),
   };
   const order = ui.lens === "secretary" && !signerRole() ? ["certs", "mins", "br", "lr"] : ["br", "lr", "certs", "mins"];
   const empty = !x.b && !x.bp && !x.certs.length;
@@ -577,7 +406,9 @@ function eventsBody() {
   return html || `<section class="sheet"><p class="empty">Nothing matches. Try another status or clear the search.</p></section>`;
 }
 function renderEvents() {
-  const head = titleBlock("Events", "Every activity", `<p>Tap an event to see its documents and where each one stands.</p>`);
+  const role = lensRole(), lens = (k, l) => `<button type="button" role="radio" data-lens="${k}" aria-checked="${role === k}"${role === k ? ' aria-current="page"' : ""}>${l}</button>`;
+  const sw = signerRole() ? "" : `<div class="areas home-role" role="radiogroup" aria-label="Work as">${lens("treasurer", "Treasurer")}${lens("secretary", "Secretary")}</div>`;
+  const head = titleBlock("Events", "Every activity", `<div class="who-row"><p class="who">${signerRole() ? "Tap an event to see its documents. Use Needs action to find what waits on you." : "Tap an event to open its documents, or start a draft for any of them."}</p>${sw}</div>`);
   const add = ui.evAdding
     ? `<section class="sheet sheet-pad ev-new"><h2>New event</h2><div class="fields"><div class="field"><label for="evNewN">Event</label><input class="line-in" id="evNewN" autocomplete="off" placeholder="e.g. Christmas Party"></div>
         <div class="two"><div class="field"><label for="evNewD">Date</label><input class="line-in" id="evNewD" type="date"></div><div class="field"><label for="evNewV">Venue <span class="opt">(optional)</span></label><input class="line-in" id="evNewV" autocomplete="off" placeholder="e.g. EYA-CLI Laboratory"></div></div></div>
@@ -600,11 +431,15 @@ document.addEventListener("click", (e) => {
   const dn = c("[data-evdone]"); if (dn) { ui.evEdit = null; renderHub(); return; }
   const dl = c("[data-evdel]"); if (dl) { const was = removeEvent(dl.dataset.evdel); ui.evOpen = null; ui.evEdit = null; keep(); renderHub(); TR.toast(`Deleted “${was.e.name}”`, () => { restoreEvent(was); ui.evOpen = was.e.id; renderHub(); }); return; }
   const ev = (k) => eventById(c(`[data-${k}]`).dataset[k.replace(/-([a-z])/g, (_, x) => x.toUpperCase())]);
-  if (c("[data-evbr]")) { openBR(c("[data-evbr]").dataset.evbr); return; }
-  if (c("[data-evbrnew]")) { const x = eventById(c("[data-evbrnew]").dataset.evbrnew); openBR(x.id, { name: x.name, date: x.date, venue: x.venue }); TR.toast("Budget request started for " + x.name); return; }
-  if (c("[data-evlr]")) { TR.BACK.hub = true; openFlow("liq", c("[data-evlr]").dataset.evlr); return; }
+  // signers go to the approval panel when a document is waiting on them
+  const signer = (key) => { const d = signerRole() && doc(key); if (d && needsMe(d)) { markSetup("opened"); openPath(d); return true; } return false; };
+  if (c("[data-evbr]")) { const id = c("[data-evbr]").dataset.evbr; if (!signer("br:" + id)) openBR(id); return; }
+  if (c("[data-evbrnew]")) { const x = eventById(c("[data-evbrnew]").dataset.evbrnew); markSetup("started"); openBR(x.id, { name: x.name, date: x.date, venue: x.venue }); TR.toast("Budget request started for " + x.name); return; }
+  if (c("[data-evlr]")) { const id = c("[data-evlr]").dataset.evlr; if (signer("lr:" + id)) return; TR.BACK.hub = true; openFlow("liq", id); return; }
+  if (c("[data-evlrnew]")) { const x = eventById(c("[data-evlrnew]").dataset.evlrnew); markSetup("started"); TR.ensureReq(x.id, { name: x.name, date: x.date, venue: x.venue }); TR.BACK.hub = true; openFlow("liq", x.id); return; }
+  if (c("[data-evmnnew]")) { const x = eventById(c("[data-evmnnew]").dataset.evmnnew); markSetup("started"); setView("sec"); newMinutes(true, { objectives: `To discuss ${x.name}.` }); return; }
   if (c("[data-evct]")) { setView("cert"); openCerts(c("[data-evct]").dataset.evct); return; }
-  if (c("[data-evctnew]")) { const x = eventById(c("[data-evctnew]").dataset.evctnew); setView("cert"); newBatch({ event: x.name, date: x.date || new Date().toISOString().slice(0, 10), evId: x.id }); return; }
+  if (c("[data-evctnew]")) { const x = eventById(c("[data-evctnew]").dataset.evctnew); markSetup("started"); setView("cert"); newBatch({ event: x.name, date: x.date || todayISO(), evId: x.id }); return; }
   if (c("[data-evmn]")) { setView("sec"); openMinutes(c("[data-evmn]").dataset.evmn); return; }
 });
 document.addEventListener("input", (e) => {

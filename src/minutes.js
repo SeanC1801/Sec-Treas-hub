@@ -44,7 +44,7 @@ const SAMPLE = () => ({
   final: true, updated: Date.parse("2026-09-12T10:00:00"), preparedBy: "Trizy Gabriel N. Nicdao",
 });
 const ROSTER0 = ["LAUREN KAILEY FRANCISCO", "TRIZY GABRIEL NICDAO", "ALISTAIRE MARC GULLIVER ESPINOSA", "ALEXIS YUMI SUZUKI", "JULLIAN MANALO", "ELICIA KLYDE MARTIGNE APOSTOL", "JAN ALDRINN FLORES", "IAN PATRICK FLORES", "CHRISTIAN DOMINIC LIWANAG", "MARK JEMIEL GUEVARRA", "SEAN KEITH HEAVEN CALING", "Jaeda Marthena Iral", "ZOIE CARLISLE MENDOZA", "JACOB ANTONIO", "LANCE JACOB SILVERIO", "PAUL ANDREI CALMA"];
-const blank = () => ({ id: "m" + Date.now().toString(36), date: new Date().toISOString().slice(0, 10), start: "", end: "", location: "", present: [], objectives: "", callToOrder: "", topics: [{ title: "", text: "" }], groups: [{ title: "", rows: [] }], reminders: "", adjournment: "", final: false, updated: Date.now(), preparedBy: me().role === "secretary" ? me().name : null });
+const blank = () => ({ id: "m" + Date.now().toString(36), date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })(), start: "", end: "", location: "", present: [], objectives: "", callToOrder: "", topics: [{ title: "", text: "" }], groups: [{ title: "", rows: [] }], reminders: "", adjournment: "", final: false, updated: Date.now(), preparedBy: me().role === "secretary" ? me().name : null });
 
 let DB = load();
 function load() {
@@ -134,9 +134,9 @@ export function openMinutes(id) {
   DB.back = id ? "hub" : null; DB.cur = id || null; DB.step = id ? ((DB.list.find((x) => x.id === id) || {}).final ? "review" : "details") : "list"; save(false);
   render(); root.scrollTop = 0;
 }
-export function newMinutes(fromHub) {
+export function newMinutes(fromHub, pre) {
   DB.back = fromHub ? "hub" : null;
-  const m = blank(); DB.list.unshift(m); DB.cur = m.id; DB.step = "details"; save();
+  const m = Object.assign(blank(), pre || {}); DB.list.unshift(m); DB.cur = m.id; DB.step = "details"; save();
   render(); root.scrollTop = 0;
 }
 function go(step) { DB.step = step; openRow = null; save(false); render(); root.scrollTop = 0; $("#secMain h2")?.focus({ preventScroll: true }); }

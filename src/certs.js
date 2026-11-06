@@ -28,7 +28,7 @@ const SAMPLE = () => ({
   updated: Date.parse("2026-10-06T09:00:00"),
 });
 const blank = () => ({
-  id: "c" + Date.now().toString(36), type: "participation", event: "", date: new Date().toISOString().slice(0, 10),
+  id: "c" + Date.now().toString(36), type: "participation", event: "", date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })(),
   venue: "EYA-CLI Building Angeles University Foundation, Angeles City, Philippines", reason: TYPES.participation.reason("[event]"), reasonEdited: false, names: "",
   left: { name: String(ORG.president).toUpperCase(), title: "AUF-ACM CHAIR" },
   right: { name: "MS. " + String(ORG.adviser).toUpperCase() + ", MCS", title: "AUF-ACM ADVISER" },
