@@ -460,25 +460,23 @@
 .ev-month h2{margin:0;font-size:19px;line-height:24px;font-weight:700;color:#fff}
 .ev-month span{font-size:13px;line-height:18px;font-weight:600}
 .ev-card{all:unset;box-sizing:border-box;display:flex;flex-direction:column;width:100%;height:100%;background:#fff;border-radius:var(--r-paper);overflow:hidden;cursor:pointer;box-shadow:0 1px 2px rgba(11,42,74,.08),0 8px 24px rgba(11,42,74,.10)}
-.ev-card:focus-visible{box-shadow:0 0 0 3px var(--action)}
-/* hover: the card lifts off the page like a raised layer (gentle; none when motion is reduced) */
-.ev-grid{perspective:1200px}
-.ev-card{transition:transform .28s cubic-bezier(.2,.8,.2,1),box-shadow .28s cubic-bezier(.2,.8,.2,1);transform-origin:50% 60%;will-change:transform}
+/* hover: a calm lift. The shadow deepens a step and the card rises 2px, nothing else.
+   It never grows, so it stays inside its own space in the grid. */
+.ev-card{transition:transform .2s cubic-bezier(.2,.7,.3,1),box-shadow .2s cubic-bezier(.2,.7,.3,1)}
 @media (hover:hover) and (pointer:fine){
-  .ev-card:hover{transform:translateY(-8px) scale(1.025) rotateX(2deg);box-shadow:0 2px 4px rgba(11,42,74,.06),0 18px 28px -6px rgba(11,42,74,.18),0 36px 60px -18px rgba(11,42,74,.28)}
-  .ev-card:hover .ev-ph.has{transform:scale(1.04)}
-  .ev-grid > li{position:relative} .ev-grid > li:hover{z-index:2}
+  .ev-card:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(11,42,74,.07),0 14px 32px rgba(11,42,74,.16)}
 }
-.ev-card:active{transform:translateY(-3px) scale(1.01);transition-duration:.1s}
-.ev-card:focus-visible{transform:translateY(-6px) scale(1.02)}
-@media (prefers-reduced-motion:reduce){ .ev-card,.ev-card:hover,.ev-card:active,.ev-card:focus-visible{transition:box-shadow .2s;transform:none} }
-.ev-ph{display:grid;place-items:center;aspect-ratio:3/2;background:#F4F8FC center/cover no-repeat;transition:transform .3s var(--out)}
-.cal-tile{position:relative;display:grid;place-items:center;width:44%;max-width:150px;aspect-ratio:120/110}
+.ev-card:focus-visible{transform:translateY(-2px);box-shadow:0 0 0 3px var(--action),0 14px 32px rgba(11,42,74,.16)}
+.ev-card:active{transform:none;box-shadow:0 1px 2px rgba(11,42,74,.08),0 4px 12px rgba(11,42,74,.10);transition-duration:.08s}
+@media (prefers-reduced-motion:reduce){ .ev-card,.ev-card:hover,.ev-card:focus-visible,.ev-card:active{transform:none} }
+.ev-ph{display:grid;place-items:center;aspect-ratio:3/2;background:#F4F8FC center/cover no-repeat}
+.cal-tile{position:relative;width:44%;max-width:150px;aspect-ratio:120/110;container-type:inline-size}
 .cal-ic{position:absolute;inset:0;width:100%;height:100%;fill:none;stroke:#8FB3D6;stroke-width:5;stroke-linecap:round}
-.cal-face{position:relative;display:grid;justify-items:center;padding-top:22%;line-height:1;color:#7EA3C7;font-family:Montserrat,system-ui,sans-serif}
-.cal-face b{font-size:clamp(28px,4.2cqi,46px);font-weight:600}
-.cal-face span{font-size:clamp(16px,2.4cqi,26px);font-weight:500}
-.cal-face b.ini{font-size:clamp(22px,3.4cqi,36px);letter-spacing:.04em}
+.cal-face{position:absolute;left:8%;right:8%;top:34%;bottom:7%;display:grid;place-content:center;justify-items:center;gap:2cqi;line-height:1;color:#7EA3C7;font-family:Montserrat,system-ui,sans-serif;white-space:nowrap}
+.cal-face b{font-size:30cqi;font-weight:600}
+.cal-face span{font-size:16cqi;font-weight:500}
+.cal-face b.ini{font-size:24cqi;letter-spacing:.04em}
+.cal-face b.ini + span{font-size:12cqi}
 .ev-rule{display:block;line-height:0}
 .ev-rule .sbar{height:5px;border-radius:0;gap:0;margin:0}
 .ev-cb{display:grid;gap:var(--s2);padding:var(--s4) var(--s4) var(--s5)}
@@ -502,7 +500,7 @@
 .ev-pagehead .mt,.ev-pagehead .ts{margin:0}
 .ev-pagehead .ev-bar{padding:var(--s3) 0 0;margin:0}
 .ev-page .ev-docs{margin-bottom:var(--s2)}
-@container app (max-width: 520px){ .ev-ph{aspect-ratio:2/1} .ev-ph .cal-tile{width:auto;height:70%} .cal-face b{font-size:32px} .cal-face span{font-size:18px} }
+@container app (max-width: 520px){ .ev-ph{aspect-ratio:2/1} .ev-ph .cal-tile{width:auto;height:70%} }
 
 /* ---- Budget Tracker (Treasurer only) ---- */
 .tk-sum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;padding:0;margin-bottom:var(--s3)}
