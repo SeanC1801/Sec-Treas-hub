@@ -934,15 +934,11 @@ const REQS=[
 ];
 /* sample receipts for Code in the Dark, as liquidated: [category index, particulars, store, invoice, reference, units, price] */
 const CID_ACT=[
-  [0,"CHEEZY RED","Puregold","140-010-000000003160","Receipt #1",10,8.10],
-  [0,"ONION RING","Puregold","140-010-000000003160","Receipt #1",10,6.90],
-  [0,"CRISPY PATATAS","Puregold","140-010-000000003160","Receipt #1",10,6.90],
-  [0,"CHOCO MUCHO MINIS","Puregold","140-010-000000003160","Receipt #1",1,48],
-  [0,"FUDGEE BAR MCPNO","Puregold","140-010-000000003160","Receipt #1",1,85.50],
-  [0,"FUDGEE BAR MLK","Puregold","140-010-000000003160","Receipt #1",1,85.50],
-  [0,"C2 APPLE","Puregold","140-010-000000003160","Receipt #1",1,318],
-  [0,"Short Vellum","Calix","5822881","Receipt #2",4,50],
-  [0,"Subre/Envelop","Calix","5822881","Receipt #2",3,5],
+  [0,"Assorted chips","Sample Mart","SAMPLE-0001","Receipt #1",20,15],
+  [0,"Bottled water","Sample Mart","SAMPLE-0001","Receipt #1",24,12.50],
+  [0,"Cookies (pack)","Sample Mart","SAMPLE-0001","Receipt #1",4,39],
+  [0,"Certificate paper","Sample Office Supply","SAMPLE-0002","Receipt #2",4,50],
+  [0,"Envelopes","Sample Office Supply","SAMPLE-0002","Receipt #2",3,5],
   [1,"1st Place","","","",1,500],
   [1,"2nd Place","","","",1,300],
   [1,"3rd Place","","","",1,200]
@@ -1593,7 +1589,7 @@ function setStateL(m){L.mode=m;L.stage=0;L.submitted=null;L.step=L.step||"edit";
   else{pickReq("cid");fillCID();
     if(m==="attn")L.items[L.items.length-1].price="";
     if(m==="over"){L.items.find(i=>i.name==="1st Place").price=650;
-      L.items.push({id:++L.uid,g:"x",name:"Masking tape, 48 mm",units:2,unit:"",price:45,store:"Calix",inv:"5822990",ref:"Receipt #3"});}}
+      L.items.push({id:++L.uid,g:"x",name:"Masking tape, 48 mm",units:2,unit:"",price:45,store:"Sample Office Supply",inv:"SAMPLE-0003",ref:"Receipt #3"});}}
   L.shown=lActual();renderReqs();renderLedgerL();saved();$$("[data-state]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.state===m));}
 function reviewGo(k){const liq=AREA==="liq",Dd=D();
   if(k==="done"||k==="approved"){const bad=liq?(!L.req||L.items.some(i=>!lp(i))):(!S.items.length||S.items.some(i=>!priced(i)));

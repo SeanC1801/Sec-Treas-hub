@@ -141,7 +141,6 @@ function renderChrome() {
   const initials = u.name.replace(/^(Ms\.|Mr\.)\s*/, "").split(/\s+/).filter((w) => /^[A-Z]/.test(w)).map((w) => w[0]).slice(0, 2).join("");
   $("#side").innerHTML = `<div class="side-brand">${LOGOS}<span class="wm lbl">sectreas hub</span>
       <button class="icon-btn side-min-btn" type="button" id="sideMin" aria-label="${min ? "Expand the sidebar" : "Collapse the sidebar"}" aria-pressed="${min}"><svg class="i"><use href="#i-collapse"/></svg></button></div>
-    <button class="side-search" type="button" id="sideSearch" title="Search (${/Mac/.test(navigator.platform) ? "⌘" : "Ctrl"} K)"><svg class="i"><use href="#i-search"/></svg><span class="lbl">Search</span><kbd class="lbl">${/Mac/.test(navigator.platform) ? "⌘" : "Ctrl"} K</kbd></button>
     <nav class="side-nav" aria-label="Hub">${tabsNow().map(([k, l, i]) => `<button type="button" data-tab="${k}"${cur(k)} title="${l}"><svg class="i" aria-hidden="true"><use href="#${i}"/></svg><span class="lbl">${l}</span></button>`).join("")}</nav>
     <div class="side-guides"><button type="button" data-tab="guides"${cur("guides")} title="Templates and guides"><svg class="i" aria-hidden="true"><use href="#i-book"/></svg><span class="lbl">Templates and guides</span></button></div>
     <div class="side-foot"><div class="me"><span class="av" aria-hidden="true">${esc(initials)}</span><span class="lbl"><b>${esc(u.name)}</b><span>${esc(ROLES[u.role])}</span></span></div><button class="icon-btn" type="button" id="sideOut" aria-label="Sign out" title="Sign out"><svg class="i"><use href="#i-out"/></svg></button></div>`;
@@ -520,35 +519,11 @@ function renderGuides() {
   return head + files + how + rules;
 }
 
-/* ---- Search (monday.com's "Search for anything"): events and documents, opens the result ---- */
-let srchFrom = null;
-function openSearch() {
-  srchFrom = document.activeElement; closeSide(false);
-  let el = $("#srch");
-  if (!el) { el = document.createElement("div"); el.id = "srch"; el.className = "srch"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", "Search"); device.appendChild(el); }
-  el.innerHTML = `<div class="srch-scrim" data-srchx></div><div class="srch-box"><div class="srch-in"><svg class="i"><use href="#i-search"/></svg><input class="line-in" id="srchQ" type="search" autocomplete="off" placeholder="Search events and documents" aria-label="Search events and documents"><button class="icon-btn" type="button" data-srchx aria-label="Close search"><svg class="i"><use href="#i-x"/></svg></button></div><ul class="rows" id="srchR"></ul></div>`;
-  el.hidden = false; renderSearch(""); $("#srchQ").focus();
-}
-function closeSearch() { const el = $("#srch"); if (el) el.hidden = true; srchFrom?.focus?.(); }
-function renderSearch(q) {
-  q = q.trim().toLowerCase();
-  const evs = eventList().filter((e) => !q || (e.name + " " + (e.venue || "")).toLowerCase().includes(q)).slice(0, 5);
-  const ds = docs().filter((d) => !d.past && (!q || (d.title + " " + d.type + " " + d.meta).toLowerCase().includes(q))).sort((a, b) => b.at - a.at).slice(0, 8);
-  const r = [...evs.map((e) => `<li class="hrow single"><button class="go" type="button" data-srchev="${e.id}"><span><span class="nm">${esc(e.name)}</span><span class="mt">Event${e.date ? " · " + esc(dShort(e.date)) : ""}</span></span></button></li>`),
-    ...ds.map((d) => `<li class="hrow single"><button class="go" type="button" data-srchdoc="${d.key}"><span><span class="nm">${esc(d.title)}</span><span class="mt">${esc(d.type)} · ${esc(statusLabel(d))}</span></span></button></li>`)];
-  $("#srchR").innerHTML = r.length ? (q ? "" : `<li class="grp">Recent</li>`) + r.join("") : `<li><p class="empty">Nothing matches “${esc(q)}”.</p></li>`;
-}
-document.addEventListener("input", (e) => { if (e.target.id === "srchQ") renderSearch(e.target.value); });
-document.addEventListener("click", (e) => {
-  if (e.target.closest("#sideSearch")) { openSearch(); return; }
-  if (!e.target.closest("#srch")) return;
-  if (e.target.closest("[data-srchx]")) { closeSearch(); return; }
-  const ev = e.target.closest("[data-srchev]"); if (ev) { closeSearch(); ui.tab = "events"; ui.evOpen = ev.dataset.srchev; ui.evPage = ui.evView !== "list" ? ev.dataset.srchev : null; keep(); setView("hub"); $("#hub").scrollTop = 0; return; }
-  const dd = e.target.closest("[data-srchdoc]"); if (dd) { closeSearch(); const d = doc(dd.dataset.srchdoc); if (d) d.open(); }
-});
+/* Ctrl/⌘ K: jump to the search box on Events (the one search in the hub) */
 document.addEventListener("keydown", (e) => {
-  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k" && device.dataset.view === "hub") { e.preventDefault(); openSearch(); return; }
-  if (e.key === "Escape" && $("#srch") && !$("#srch").hidden) { e.stopPropagation(); closeSearch(); }
+  if (!((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k" && device.dataset.view === "hub")) return;
+  e.preventDefault(); if (ui.tab !== "events" || ui.evPage) { ui.tab = "events"; ui.evPage = null; keep(); renderHub(); }
+  $("#libQ")?.focus(); $("#libQ")?.select();
 }, true);
 
 /* ---- Profile ---- */
