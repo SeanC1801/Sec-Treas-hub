@@ -2,7 +2,7 @@
 // Profile and the approval path panel. Front-end draft only: everything is
 // kept on this device until the backend exists (see docs/design/UX_MAP.md).
 import { TR } from "./prototype.js";
-import { ROLES, getSession, setSession, me } from "./session.js";
+import { ROLES, getSession, setSession, me, TEST_OFFICER } from "./session.js";
 import { minutesList, openMinutes, showMinutes, newMinutes } from "./minutes.js";
 import { certList, openCerts, showCerts, newBatch, TYPES as CERT_TYPES } from "./certs.js";
 import { PHOTOS, loadPhotos, addPhoto, dropPhoto, keepPhoto } from "./photos.js";
@@ -126,12 +126,14 @@ addEventListener("hub:close", () => { setView("hub"); TR.toast("Saved. You’re 
 $("#apphead .hd-mark")?.addEventListener("click", (e) => { e.preventDefault(); setView("hub"); });
 
 /* ---------------- hub chrome: Events · Profile (Events is the landing page) ---------------- */
-const TABS = [["events", "Events", "i-cal"], ["profile", "Profile", "i-user"]];
+const ALL_TABS = [["events", "Events", "i-cal"], ["tracker", "Budget Tracker", "i-sheet"], ["profile", "Profile", "i-user"]];
+const trackerOK = () => !signerRole() && ui.lens !== "secretary"; // the Budget Tracker is the Treasurer's alone
+const tabsNow = () => ALL_TABS.filter((t) => t[0] !== "tracker" || trackerOK());
 const signerRole = () => me().role === "president" || me().role === "adviser";
 /* the sidebar: brand, search, the tabs, guides, and you. New drafts start inside each event */
 function renderChrome() {
   if (ui.tab === "library") ui.tab = "events"; // Library is now part of Events
-  if (!TABS.some((t) => t[0] === ui.tab) && ui.tab !== "guides") ui.tab = "events";
+  if (!tabsNow().some((t) => t[0] === ui.tab) && ui.tab !== "guides") ui.tab = "events";
   const u = me(), role = lensRole();
   const cur = (k) => (k === ui.tab ? ' aria-current="page"' : "");
   const min = !!ui.sideMin;
@@ -140,7 +142,7 @@ function renderChrome() {
   $("#side").innerHTML = `<div class="side-brand">${LOGOS}<span class="wm lbl">sectreas hub</span>
       <button class="icon-btn side-min-btn" type="button" id="sideMin" aria-label="${min ? "Expand the sidebar" : "Collapse the sidebar"}" aria-pressed="${min}"><svg class="i"><use href="#i-collapse"/></svg></button></div>
     <button class="side-search" type="button" id="sideSearch" title="Search (${/Mac/.test(navigator.platform) ? "⌘" : "Ctrl"} K)"><svg class="i"><use href="#i-search"/></svg><span class="lbl">Search</span><kbd class="lbl">${/Mac/.test(navigator.platform) ? "⌘" : "Ctrl"} K</kbd></button>
-    <nav class="side-nav" aria-label="Hub">${TABS.map(([k, l, i]) => `<button type="button" data-tab="${k}"${cur(k)} title="${l}"><svg class="i" aria-hidden="true"><use href="#${i}"/></svg><span class="lbl">${l}</span></button>`).join("")}</nav>
+    <nav class="side-nav" aria-label="Hub">${tabsNow().map(([k, l, i]) => `<button type="button" data-tab="${k}"${cur(k)} title="${l}"><svg class="i" aria-hidden="true"><use href="#${i}"/></svg><span class="lbl">${l}</span></button>`).join("")}</nav>
     <div class="side-guides"><button type="button" data-tab="guides"${cur("guides")} title="Templates and guides"><svg class="i" aria-hidden="true"><use href="#i-book"/></svg><span class="lbl">Templates and guides</span></button></div>
     <div class="side-foot"><div class="me"><span class="av" aria-hidden="true">${esc(initials)}</span><span class="lbl"><b>${esc(u.name)}</b><span>${esc(ROLES[u.role])}</span></span></div><button class="icon-btn" type="button" id="sideOut" aria-label="Sign out" title="Sign out"><svg class="i"><use href="#i-out"/></svg></button></div>`;
 }
@@ -169,7 +171,7 @@ function titleBlock(kicker, h1, extra = "") {
 }
 function renderHub() {
   renderChrome();
-  const T = { events: renderEvents, profile: renderProfile, guides: renderGuides }[ui.tab] || renderEvents;
+  const T = { events: renderEvents, tracker: renderTracker, profile: renderProfile, guides: renderGuides }[ui.tab] || renderEvents;
   $("#hubMain").innerHTML = T();
 }
 
@@ -560,6 +562,46 @@ const SIGN = [
   ["through", "CSC Treasurer (the letter goes through)", () => ORG.through.name, (v) => (ORG.through.name = v)],
   ["to", "CSC President (the letter is addressed to)", () => ORG.to.name, (v) => (ORG.to.name = v)],
 ];
+/* ---- Budget Tracker (Treasurer only): the chapter's Breakdown of Expenses sheet, same columns and merged cells.
+   It fills itself from the liquidation reports; nothing is typed here. ---- */
+const amt = (n) => (n < 0 ? `(${nf.format(-n)})` : nf.format(n));
+function renderTracker() {
+  const { T, A } = TR.semTotals(), df = A - T;
+  const head = titleBlock("Treasurer · 1st semester, A.Y. 2026–27", "Budget Tracker", `<p class="who">Every event’s receipts against its approved budget. It fills itself from the liquidation reports.</p>`);
+  const fig = (l, v, cls = "") => `<div class="tk-fig ${cls}"><span>${l}</span><b class="tab">${v}</b></div>`;
+  const sum = `<section class="sheet tk-sum">${fig("Allotted", peso(A))}${fig("Actual expense", peso(T))}${fig(df < 0 ? "Deficit" : "Excess", (df < 0 ? "(" : "") + peso(Math.abs(df)) + (df < 0 ? ")" : ""), df < 0 ? "neg" : "pos")}</section>`;
+  // sheet order (as the Treasurer lists them), one tbody per event
+  const groups = REQS.map((r) => {
+    const ev = eventById(r.id), name = (ev && ev.name) || r.short || r.name, { items } = TR.evData(r.id), Al = TR.evAllot(r);
+    const docs = (n) => { const br = TR.brState(r.id);
+      const b = br ? `<button class="textbtn" type="button" data-evbr="${r.id}">Open</button>` : !r.fromBR && Al != null ? `<button class="textbtn" type="button" data-path="bp:${r.id}">Open</button>` : "—";
+      const l = Al != null || r.provisional ? `<button class="textbtn" type="button" data-evlr="${r.id}">${items.length ? "Open" : "Start"}</button>` : "—";
+      return `<td class="docs" rowspan="${n}">${b}</td><td class="docs" rowspan="${n}">${l}</td>`; };
+    if (!items.length || Al == null) // like the sheet's last rows: the event, with nothing under it yet
+      return `<tbody class="evg"><tr class="empty-ev"><th class="ev" scope="row">${esc(name)}</th><td colspan="7" class="muted">${Al == null ? (r.provisional ? "Draft · budget not approved yet" : "No approved budget yet") : "No receipts yet"}</td><td class="n big">—</td><td class="n big">${Al == null ? "—" : nf.format(Al)}</td><td class="n big">—</td>${docs(1)}</tr></tbody>`;
+    const Tt = items.reduce((a, i) => a + TR.lTot(i), 0), pend = items.some((i) => !TR.lp(i)), d = Al - Tt, n = items.length;
+    let rows = "", first = true;
+    for (const b of TR.rcBlocks(items)) {
+      const r0 = b.rows[0], bt = b.rows.reduce((a, i) => a + TR.lTot(i), 0), m = b.rows.length;
+      b.rows.forEach((i, k) => {
+        rows += "<tr>";
+        if (first) rows += `<th class="ev" scope="rowgroup" rowspan="${n}">${esc(name)}</th>`;
+        if (k === 0) rows += `<td class="inv" rowspan="${m}">${esc(r0.inv || "")}</td><td rowspan="${m}">${esc(r0.store || r0.ref || "")}</td>`;
+        rows += `<td class="n">${TR.lp(i) ? nf.format(i.price) : '<span class="pend">—</span>'}</td><td>${esc(i.name)}</td><td class="n">${esc(i.units)}</td><td class="n">${TR.lp(i) ? nf.format(TR.lTot(i)) : '<span class="pend">needs a price</span>'}</td>`;
+        if (k === 0) rows += `<td class="n" rowspan="${m}">${nf.format(bt)}</td>`;
+        if (first) rows += `<td class="n big" rowspan="${n}">${nf.format(Tt)}</td><td class="n big" rowspan="${n}">${nf.format(Al)}</td><td class="n big${!pend && d < 0 ? " neg" : ""}" rowspan="${n}">${pend ? '<span class="pend">pending</span>' : amt(d)}</td>${docs(n)}`;
+        rows += "</tr>"; first = false;
+      });
+    }
+    return `<tbody class="evg">${rows}</tbody>`;
+  }).join("");
+  const H = ["Event", "Invoice Number", "Brand / Store", "Unit Price", "Particulars", "Units", "Total Unit Price", "Receipt Total", "Total Actual Expense", "Allotted Budget", "Excess (Deficit)", "Budget Request Document", "Liquidation Report Document"];
+  const table = `<section class="sheet tk-sheet"><h2 class="tk-cap">AUF-ACM STUDENT CHAPTER BREAKDOWN OF EXPENSES A.Y. ’26–’27</h2>
+    <p class="tk-hint swipe">Swipe sideways to see every column.</p>
+    <div class="tk-scroll" tabindex="0" role="region" aria-label="Breakdown of expenses"><table class="tk-tbl"><thead><tr>${H.map((h) => `<th scope="col">${h}</th>`).join("")}</tr></thead>${groups}
+    <tfoot><tr><td colspan="8">Semester total</td><td class="n">${nf.format(T)}</td><td class="n">${nf.format(A)}</td><td class="n${df < 0 ? " neg" : ""}">${amt(df)}</td><td colspan="2"></td></tr></tfoot></table></div></section>`;
+  return head + sum + table;
+}
 function renderProfile() {
   const u = me();
   const head = titleBlock("AUF-ACM Student Chapter", "Profile", `<p>Your account, the signatories and the officer list.</p>`);
@@ -607,7 +649,7 @@ document.addEventListener("click", (e) => {
 /* ---------------- Sign in (draft: no real Google yet) ---------------- */
 let signAs = 0;
 function people() {
-  return [...ORG.treasurers.map((n) => ["treasurer", n]), ["president", ORG.president], ["adviser", ORG.adviser], ...ORG.secretaries.map((n) => ["secretary", n])];
+  return [["treasurer", TEST_OFFICER], ...ORG.treasurers.map((n) => ["treasurer", n]), ["president", ORG.president], ["adviser", ORG.adviser], ...ORG.secretaries.map((n) => ["secretary", n])];
 }
 function renderSignin() {
   $("#signin").innerHTML = `<div class="si-mark">${LOGOS}<span>sectreas hub</span></div><div class="signin-l">

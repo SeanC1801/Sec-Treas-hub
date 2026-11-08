@@ -918,5 +918,5 @@ BOOTED=true;persist();
 if(qs.get("type")){(AREA==="liq"?$("#lqa"):$("#qa")).value=qs.get("type");(AREA==="liq"?renderReadsL:renderReads)();}
 
 /* the hub shell (src/hub.js) drives the flows through this */
-export const TR={ensureReq,BRS,openBR,brState,brList,syncApproved,BACK,prep,S,L,LRS,REQS,ORG,STAGE,evData,evAllot,reqTot,lTot,total,go,setArea,pickReq,openEvent,snapL,saved,toast,logStage,setStamp,
+export const TR={semTotals,rcBlocks,lp,ensureReq,BRS,openBR,brState,brList,syncApproved,BACK,prep,S,L,LRS,REQS,ORG,STAGE,evData,evAllot,reqTot,lTot,total,go,setArea,pickReq,openEvent,snapL,saved,toast,logStage,setStamp,
   area:()=>AREA,doc:()=>D(),stampFmt};

@@ -44,7 +44,7 @@ const SAMPLE = () => ({
   final: true, updated: Date.parse("2026-09-12T10:00:00"), preparedBy: "Trizy Gabriel N. Nicdao",
 });
 const ROSTER0 = ["LAUREN KAILEY FRANCISCO", "TRIZY GABRIEL NICDAO", "ALISTAIRE MARC GULLIVER ESPINOSA", "ALEXIS YUMI SUZUKI", "JULLIAN MANALO", "ELICIA KLYDE MARTIGNE APOSTOL", "JAN ALDRINN FLORES", "IAN PATRICK FLORES", "CHRISTIAN DOMINIC LIWANAG", "MARK JEMIEL GUEVARRA", "SEAN KEITH HEAVEN CALING", "Jaeda Marthena Iral", "ZOIE CARLISLE MENDOZA", "JACOB ANTONIO", "LANCE JACOB SILVERIO", "PAUL ANDREI CALMA"];
-const blank = () => ({ id: "m" + Date.now().toString(36), date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })(), start: "", end: "", location: "", present: [], objectives: "", callToOrder: "", topics: [{ title: "", text: "" }], groups: [{ title: "", rows: [] }], reminders: "", adjournment: "", final: false, updated: Date.now(), preparedBy: me().role === "secretary" ? me().name : null });
+const blank = () => ({ id: "m" + Date.now().toString(36), date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })(), start: "", end: "", location: "", present: [], objectives: "", callToOrder: "", topics: [{ title: "", text: "" }], groups: [{ title: "", rows: [] }], reminders: "", adjournment: "", final: false, updated: Date.now(), preparedBy: me().role === "secretary" || me().name === "Test Officer" ? me().name : null });
 
 let DB = load();
 function load() {

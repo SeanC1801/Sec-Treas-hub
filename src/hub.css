@@ -336,7 +336,11 @@
 @media (prefers-reduced-motion:reduce){ .side{transition:none!important} }
 /* desktop: the sidebar is always there; main list in the middle, activity on the right */
 @container app (min-width: 960px){
-  .hub-layout{padding:var(--s6) var(--s6) var(--s7) calc(252px + var(--s3) + var(--s6));max-width:1240px}
+  /* main content sits in the exact middle of the space beside the sidebar, open or collapsed */
+  .hub-layout{padding:var(--s6) var(--s6) var(--s7) calc(252px + var(--s3) + var(--s6));max-width:none;transition:padding-left .2s var(--out)}
+  .device.side-min .hub-layout{padding-left:calc(76px + var(--s3) + var(--s6))}
+  .hub-main{width:100%;max-width:1080px!important;margin-inline:auto}
+  .hub-main:has(.tk-sheet){max-width:1340px!important} /* the sheet needs its columns */
   .home-grid{grid-template-columns:minmax(0,1fr) minmax(280px,340px);gap:var(--s5);align-items:start}
   .hub-main{max-width:none}
   .hub-title{padding:0 0 var(--s4)}
@@ -504,3 +508,35 @@
 .ev-pagehead .ev-bar{padding:var(--s3) 0 0;margin:0}
 .ev-page .ev-docs{margin-bottom:var(--s2)}
 @container app (max-width: 520px){ .ev-ph{aspect-ratio:2/1} .ev-ph .cal-tile{width:auto;height:70%} .cal-face b{font-size:32px} .cal-face span{font-size:18px} }
+
+/* ---- Budget Tracker (Treasurer only) ---- */
+.tk-sum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;padding:0;margin-bottom:var(--s3)}
+.tk-fig{display:grid;gap:2px;padding:var(--s4)}
+.tk-fig + .tk-fig{border-left:1px solid var(--rule)}
+.tk-fig span{font-size:12px;line-height:16px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.04em}
+.tk-fig b{font-size:22px;line-height:28px;color:var(--ink)}
+.tk-fig.pos b{color:var(--leaf)} .tk-fig.neg b{color:var(--sun)}
+@container app (max-width: 640px){
+  .tk-sum{grid-template-columns:minmax(0,1fr)} .tk-fig + .tk-fig{border-left:0;border-top:1px solid var(--rule)}
+  .tk-fig{grid-template-columns:1fr auto;align-items:baseline;padding:var(--s3) var(--s4)} .tk-fig b{font-size:18px}
+}
+/* the sheet: same columns and merged cells as the chapter's Breakdown of Expenses */
+.tk-sheet{padding:0;overflow:hidden}
+.tk-cap{margin:0;padding:var(--s3) var(--s4);font-size:14px;line-height:20px;font-weight:700;letter-spacing:.02em;text-align:center;border-bottom:1px solid var(--rule)}
+.tk-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tk-tbl{border-collapse:collapse;width:100%;min-width:1100px;font-size:13px;line-height:18px;font-variant-numeric:tabular-nums}
+.tk-tbl th,.tk-tbl td{border:1px solid #D5DEE8;padding:6px 8px;vertical-align:middle;text-align:left}
+.tk-tbl thead th{position:sticky;top:0;background:#0B2A4A;color:#fff;font-size:12px;line-height:16px;font-weight:700;text-align:center;vertical-align:middle}
+.tk-tbl .n{text-align:right;white-space:nowrap}
+.tk-tbl .ev{font-weight:700;text-transform:uppercase;text-align:center;background:#F4F8FC;min-width:130px}
+.tk-tbl .inv{white-space:nowrap;font-size:12px}
+.tk-tbl .big{font-weight:700;text-align:center;background:#F4F8FC}
+.tk-tbl .neg{color:var(--sun)}
+.tk-tbl .docs{text-align:center;white-space:nowrap}
+.tk-tbl .docs .textbtn{margin:0;padding:4px 0}
+.tk-tbl .empty-ev td{height:30px}
+.tk-tbl tbody.evg + tbody.evg tr:first-child > *{border-top:3px solid #9DB4CC}
+.tk-tbl .pend{color:var(--sun);font-style:italic}
+.tk-tbl tfoot td{font-weight:700;background:rgba(11,42,74,.06);border-top:3px solid #9DB4CC}
+.tk-hint{margin:0;padding:var(--s2) var(--s4);font-size:12px;line-height:16px;color:var(--ink-2)}
+@container app (min-width: 1240px){ .tk-hint.swipe{display:none} }
