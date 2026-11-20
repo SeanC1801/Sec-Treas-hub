@@ -2,7 +2,7 @@
 
 For: Ian (Ian Patrick Flores). Senior who validates: Trizy (Trizy Gabriel N. Nicdao).
 
-Back to: [overview.md](../02_CONTEXT/overview.md). Read first: [rules.md](../00_CORE/rules.md) and [review-questions.md](../02_CONTEXT/review-questions.md). Bug details: [findings.md](../03_TRACKING/findings.md). The Treasurer list is in [treasurer.md](treasurer.md).
+Router: [agents.md](../00_CORE/agents.md). Back to: [overview.md](../02_CONTEXT/overview.md). Read first: [rules.md](../00_CORE/rules.md) and [review-questions.md](../02_CONTEXT/review-questions.md). Bug details: [findings.md](../03_TRACKING/findings.md). The Treasurer list is in [treasurer.md](treasurer.md).
 
 - Live hub: https://sec-treas-hub.vercel.app/ (shows `main`; use localhost for your own changes).
 - Repository: https://github.com/SeanC1801/Sec-Treas-hub
@@ -35,9 +35,9 @@ Your templates, added by the AI from your answers ([rules.md](../00_CORE/rules.m
 ## S0. Review your section (do this first)
 
 1. Open the live hub: https://sec-treas-hub.vercel.app/ on your computer and your phone. Switch to Secretary on the Events page.
-2. Answer every question in [review-questions.md](../02_CONTEXT/review-questions.md) with your AI, and list every flaw and error in your section.
+2. Answer every question in [review-questions.md](../02_CONTEXT/review-questions.md) with Claude, and list every flaw and error in your section.
 3. Tell the AI about any templates you use (they go in "My templates" above) and your guardrails, if you want any ("My guardrails").
-4. Your AI adds your answers to "Your own tasks" at the end of this file and asks: "Would you like to add anything else?"
+4. Claude adds your answers to "Your own tasks" at the end of this file and asks: "Would you like to add anything else?"
 5. Before your first code change, set up localhost ([rules.md](../00_CORE/rules.md), part 1B).
 
 ## When a task is done (every task)
@@ -57,7 +57,7 @@ Your templates, added by the AI from your answers ([rules.md](../00_CORE/rules.m
 - Steps:
   1. Open Code in the Dark, then its minutes. Scroll down on Details and watch the "Next / Continue" bar move up with the page.
   2. Cause: the bar (`<div class="dock-wrap">` at the end of the render in `src/minutes.js`) is inside `#sec`, and `#sec` is what scrolls (`src/minutes.css`: `position:absolute; inset:0; overflow:auto`).
-  3. Fix it so the bar stays at the bottom of the screen while the content scrolls. Two ways (pick one and tell your AI to explain it to you first):
+  3. Fix it so the bar stays at the bottom of the screen while the content scrolls. Two ways (pick one and tell Claude to explain it to you first):
      - move the scrolling to an inner wrapper and keep the bar outside it, or
      - keep the bar where it is but make it stick to the bottom of `#sec` (for example `position:sticky; bottom:0`), scoped to `#sec` only.
   4. Keep space under the last field so it can be scrolled above the bar.
@@ -115,6 +115,6 @@ Your templates, added by the AI from your answers ([rules.md](../00_CORE/rules.m
 
 ## Your own tasks
 
-Added by your AI from your answers to [review-questions.md](../02_CONTEXT/review-questions.md). Number them S5, S6, and so on. For each one write: what you saw or want, desktop/phone/both, which screen, and steps to see it.
+Added by Claude from your answers to [review-questions.md](../02_CONTEXT/review-questions.md). Number them S5, S6, and so on. For each one write: what you saw or want, desktop/phone/both, which screen, and steps to see it.
 
 - (none yet)

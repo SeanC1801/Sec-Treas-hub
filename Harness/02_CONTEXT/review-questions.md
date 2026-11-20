@@ -1,6 +1,6 @@
 # Review questions: answer these before any work
 
-Back to: [overview.md](overview.md). Rules: [rules.md](../00_CORE/rules.md). Then: [treasurer.md](../01_SPECS/treasurer.md) (Nico) or [secretary.md](../01_SPECS/secretary.md) (Ian).
+Router: [agents.md](../00_CORE/agents.md). Back to: [overview.md](overview.md). Rules: [rules.md](../00_CORE/rules.md). Then: [treasurer.md](../01_SPECS/treasurer.md) (Nico) or [secretary.md](../01_SPECS/secretary.md) (Ian).
 
 How the AI asks:
 

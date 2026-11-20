@@ -2,7 +2,7 @@
 
 For: Nico (Christian Dominic Liwanag). Senior who validates: Alexis (Alexis Yumi M. Suzuki).
 
-Back to: [overview.md](../02_CONTEXT/overview.md). Read first: [rules.md](../00_CORE/rules.md) and [review-questions.md](../02_CONTEXT/review-questions.md). Bug details: [findings.md](../03_TRACKING/findings.md). The Secretary list is in [secretary.md](secretary.md).
+Router: [agents.md](../00_CORE/agents.md). Back to: [overview.md](../02_CONTEXT/overview.md). Read first: [rules.md](../00_CORE/rules.md) and [review-questions.md](../02_CONTEXT/review-questions.md). Bug details: [findings.md](../03_TRACKING/findings.md). The Secretary list is in [secretary.md](secretary.md).
 
 - Live hub: https://sec-treas-hub.vercel.app/ (shows `main`; use localhost for your own changes).
 - Repository: https://github.com/SeanC1801/Sec-Treas-hub
@@ -37,9 +37,9 @@ Your templates, added by the AI from your answers ([rules.md](../00_CORE/rules.m
 ## T0. Review your section (do this first)
 
 1. Open the live hub: https://sec-treas-hub.vercel.app/ on your computer and your phone.
-2. Answer every question in [review-questions.md](../02_CONTEXT/review-questions.md) with your AI, and list every flaw and error in your section.
+2. Answer every question in [review-questions.md](../02_CONTEXT/review-questions.md) with Claude, and list every flaw and error in your section.
 3. Tell the AI about any templates you use (they go in "My templates" above) and your guardrails, if you want any ("My guardrails").
-4. Your AI adds your answers to "Your own tasks" at the end of this file and asks: "Would you like to add anything else?"
+4. Claude adds your answers to "Your own tasks" at the end of this file and asks: "Would you like to add anything else?"
 5. Before your first code change, set up localhost ([rules.md](../00_CORE/rules.md), part 1B).
 
 ## When a task is done (every task)
@@ -117,6 +117,6 @@ Your templates, added by the AI from your answers ([rules.md](../00_CORE/rules.m
 
 ## Your own tasks
 
-Added by your AI from your answers to [review-questions.md](../02_CONTEXT/review-questions.md). Number them T5, T6, and so on. For each one write: what you saw or want, desktop/phone/both, which screen, and steps to see it.
+Added by Claude from your answers to [review-questions.md](../02_CONTEXT/review-questions.md). Number them T5, T6, and so on. For each one write: what you saw or want, desktop/phone/both, which screen, and steps to see it.
 
 - (none yet)

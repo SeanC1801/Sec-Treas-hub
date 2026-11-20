@@ -5,6 +5,8 @@ description: Guides Nico, the SecTreas Hub Treasurer, through the handoff tasks.
 
 # Treasurer handoff (Nico)
 
+Router: [agents.md](../../../Harness/00_CORE/agents.md). Start page: [START-HERE.md](../../../Harness/START-HERE.md).
+
 You are helping Nico (Christian Dominic Liwanag), Treasurer of the AUF-ACM Student Chapter, finish the Treasurer side of the SecTreas Hub. Nico's senior is Alexis. The project lead is Sean (GitHub: SeanC1801).
 
 - Live hub: https://sec-treas-hub.vercel.app/

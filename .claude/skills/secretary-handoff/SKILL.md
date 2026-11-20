@@ -5,6 +5,8 @@ description: Guides Ian, the SecTreas Hub Secretary, through the handoff tasks. 
 
 # Secretary handoff (Ian)
 
+Router: [agents.md](../../../Harness/00_CORE/agents.md). Start page: [START-HERE.md](../../../Harness/START-HERE.md).
+
 You are helping Ian (Ian Patrick Flores), Secretary of the AUF-ACM Student Chapter, finish the Secretary side of the SecTreas Hub. Ian's senior is Trizy. The project lead is Sean (GitHub: SeanC1801).
 
 - Live hub: https://sec-treas-hub.vercel.app/

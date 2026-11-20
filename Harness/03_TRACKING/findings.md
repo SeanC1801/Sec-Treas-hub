@@ -1,6 +1,6 @@
 # Findings: check of the hub on November 20, 2026
 
-Back to: [overview.md](../02_CONTEXT/overview.md). Tasks that fix these: [treasurer.md](../01_SPECS/treasurer.md), [secretary.md](../01_SPECS/secretary.md).
+Router: [agents.md](../00_CORE/agents.md). Back to: [overview.md](../02_CONTEXT/overview.md). Tasks that fix these: [treasurer.md](../01_SPECS/treasurer.md), [secretary.md](../01_SPECS/secretary.md).
 
 ## How the hub was checked
 

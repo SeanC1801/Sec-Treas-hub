@@ -1,5 +1,7 @@
 # <task number>: <short title>
 
+Router: [agents.md](../../00_CORE/agents.md). Log rules: [rules.md](../../00_CORE/rules.md), part 10. Changelog: [changelog.md](../changelog.md).
+
 Copy this file when a task starts. Name the copy after the branch, like `T1-tracker-buttons.md` or `S1-minutes-bar.md`. Fill it in as you go, from the first look to the final pull request. Write only what was seen or said (see [rules.md](../../00_CORE/rules.md), part 10).
 
 - Who: <Nico / Ian>

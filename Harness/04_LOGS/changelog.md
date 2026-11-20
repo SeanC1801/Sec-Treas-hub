@@ -44,10 +44,11 @@ How to check any entry yourself: `git show <commit> --stat`.
 - fbd4dcc: Event cards lift on hover; sidebar search removed; the real receipts replaced with sample receipts in the app and in the archived prototypes.
 - 0037e97: Calmer card hover (a 2 px lift and a deeper shadow); date text always fits inside the calendar tile.
 
-## November 20, 2026: check and handoff (not committed yet when written)
+## November 20, 2026: check and handoff
 
 - Checked every screen on desktop and phone. Results in [findings.md](../03_TRACKING/findings.md).
-- Added the `Harness/` folder: the handoff for Nico and Ian, with tasks, rules, review questions, decisions, learnings, and these logs.
+- 0568bc9: Added the `Harness/` folder: the handoff for Nico and Ian, with tasks, rules, review questions, decisions, learnings, and these logs.
+- (next commit): every Harness file links back to `agents.md`; the skills moved to `.claude/skills/` so they work with no install; `CLAUDE.md` added at the repo root (replacing `AGENTS.md`); START-HERE simplified for Claude Code.
 
 ---
 

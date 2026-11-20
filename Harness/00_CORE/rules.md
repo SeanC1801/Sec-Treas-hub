@@ -1,6 +1,6 @@
-# Rules for Nico, Ian and their AI assistants
+# Rules for Nico, Ian and Claude
 
-Back to: [overview.md](../02_CONTEXT/overview.md). Next: [review-questions.md](../02_CONTEXT/review-questions.md).
+Router: [agents.md](agents.md). Back to: [overview.md](../02_CONTEXT/overview.md). Next: [review-questions.md](../02_CONTEXT/review-questions.md).
 
 ## Part 1. Seeing the hub
 
@@ -163,7 +163,7 @@ The hub makes each document from a template. If you use a template the hub does 
 
 ## Part 10. Logging your work (so nothing is guessed)
 
-Every task is written down from the first look to the final pull request. This keeps a true record, so you, Sean and any AI can see what really happened.
+Every task is written down from the first look to the final pull request. This keeps a true record, so you, Sean and Claude can see what really happened.
 
 1. Before each session, the AI reads [changelog.md](../04_LOGS/changelog.md) and the task's log in `04_LOGS/tasks/`.
 2. When a task starts, the AI copies [_TEMPLATE.md](../04_LOGS/tasks/_TEMPLATE.md) to `04_LOGS/tasks/<branch name>.md` (like `T1-tracker-buttons.md`).
