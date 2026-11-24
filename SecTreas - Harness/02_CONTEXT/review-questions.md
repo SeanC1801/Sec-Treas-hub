@@ -13,11 +13,16 @@ How the AI asks:
 
 1. "Are you Nico (Treasurer) or Ian (Secretary)?"
    - If the answer is anyone else: "This handoff is only for Nico and Ian. Please talk to Sean." Then stop.
-2. Only if their task file says "Deadline plan: not chosen yet":
+2. Before writing anything, make the review branch ([rules.md](../00_CORE/rules.md), part 2). Ask first, then run:
+   - `git checkout main`
+   - `git pull`
+   - `git checkout -b treasurer/T0-review` (Nico) or `git checkout -b secretary/S0-review` (Ian)
+   - If the branch already exists (a later session), switch to it instead: `git checkout treasurer/T0-review`.
+3. Only if their task file says "Deadline plan: not chosen yet":
    - "Can you finish all your tasks by Monday, November 30 (Plan A), or will you follow the soft deadline and finish before December 15 (Plan B)? Like: 'Plan A' or 'Plan B.'"
    - If they are unsure, show them the dates for both plans from [timeline.md](../01_SPECS/timeline.md).
    - Write the answer at the top of their task file, and write each task's due date from the timeline ([rules.md](../00_CORE/rules.md), parts 11 and 12). These changes go on their T0 or S0 branch; [PROGRESS.md](../../PROGRESS.md) picks them up within the hour.
-3. Say which task is due next and how many days are left. Like: "Your next task is T0, due Wednesday, November 25: 1 day left."
+4. Say which task is due next and how many days are left. Like: "Your next task is T0, due Wednesday, November 25: 1 day left."
 
 ## Step 2. Open the hub
 
@@ -98,5 +103,6 @@ The hub makes documents from templates. Find out which ones they use, so the hub
    [PROGRESS.md](../../PROGRESS.md) shows the new tasks within the hour, once they are pushed on the T0 or S0 branch.
 2. Show the full list and ask: "Is this list right? Would you like to add anything else? Like: 'yes, that's all' or 'add one more.'"
 3. Ask: "Which task do you want to do first? Like: 'T1.'"
-4. Remind them: "If this task changes what a document says or looks like, ask your senior first (Alexis for Nico, Trizy for Ian). Would you like me to write that message for you?"
-5. Only then start the task, following [rules.md](../00_CORE/rules.md), part 4.
+4. Tell them: "Next, we open the pull request for your review (T0 or S0). Sean merges it before you start any other task, because it sets all your due dates." Give the commands and the changelog line ([rules.md](../00_CORE/rules.md), part 2).
+5. Remind them: "If this task changes what a document says or looks like, ask your senior first (Alexis for Nico, Trizy for Ian). Would you like me to write that message for you?"
+6. Only then start the task, following [rules.md](../00_CORE/rules.md), part 4.

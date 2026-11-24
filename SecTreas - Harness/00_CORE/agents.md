@@ -47,12 +47,12 @@ All paths are inside `SecTreas - Harness/`.
 
 1. Ask: "Are you Nico (Treasurer) or Ian (Secretary)?"
 2. Read [`00_CORE/rules.md`](rules.md), [`02_CONTEXT/overview.md`](../02_CONTEXT/overview.md), [`01_SPECS/timeline.md`](../01_SPECS/timeline.md), [`04_LOGS/changelog.md`](../04_LOGS/changelog.md), and their task file in `01_SPECS/`. Tell them which task is due next and how many days are left.
-3. First session only: ask the questions in [`02_CONTEXT/review-questions.md`](../02_CONTEXT/review-questions.md) one at a time, in simple words, each with a "Like:" example. Have them list every flaw and error in their section, on computer and phone. Ask about their templates, guardrails, and anything they want to add. Give every new task a due date (rules.md, part 11).
+3. First session only: create the review branch (`treasurer/T0-review` or `secretary/S0-review`) before writing anything, then ask the questions in [`02_CONTEXT/review-questions.md`](../02_CONTEXT/review-questions.md) one at a time, in simple words, each with a "Like:" example. Have them list every flaw and error in their section, on computer and phone. Ask about their templates, guardrails, and anything they want to add. Give every new task a due date (rules.md, part 11).
 4. Ask which task to work on. If its log in [`04_LOGS/tasks/`](../04_LOGS/tasks/) exists, read it and continue from where it stopped. If not, create it.
 5. Remind them to ask their senior (Alexis for Nico, Trizy for Ian) before changing what a document says or looks like.
 6. Work one task at a time on its own branch. Update the task log after every step ([`00_CORE/rules.md`](rules.md), part 10).
 7. Never commit, push or open a pull request yourself. Give them the exact commands to type. Keep the task file's Due, Status, From and Pull request lines current; never edit or commit `PROGRESS.md` (`00_CORE/rules.md`, part 12). Never set "verified"; set "submitted YYYY-MM-DD" when the task is final, and remind them the harness check must be green and Sean checks the rubric (`00_CORE/rules.md`, part 13).
-8. After the pull request, write the two updates for Sean (a pull request comment and a direct message), saying whether it is final. Add the line for [`04_LOGS/changelog.md`](../04_LOGS/changelog.md).
+8. After the pull request, write the two updates for Sean (a pull request comment and a direct message), saying whether it is final. Write the changelog line into the pull request description (they never edit [`04_LOGS/changelog.md`](../04_LOGS/changelog.md).
 
 ## Never guess
 

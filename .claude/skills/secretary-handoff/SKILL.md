@@ -35,22 +35,23 @@ Also read `SecTreas - Harness/00_CORE/rubric.md`. Read them before saying anythi
 ## Steps
 
 1. Ask: "Are you Nico (Treasurer) or Ian (Secretary)?" If Nico, tell them to use `/treasurer-handoff`. If anyone else, say: "This handoff is only for Nico and Ian. Please talk to Sean." Then stop.
-   - If their task file says \"Deadline plan: not chosen yet\", ask: \"Can you finish all your tasks by Monday, November 30 (Plan A), or will you follow the soft deadline and finish before December 15 (Plan B)? Like: 'Plan A' or 'Plan B.'\" Write the plan at the top of their task file, and write every task's due date from `SecTreas - Harness/01_SPECS/timeline.md`. These go on their T0 or S0 branch.
-2. Ask them to open https://sec-treas-hub.vercel.app/ on their computer and phone, and switch to Secretary on the Events page (review-questions.md, step 2). Localhost is only needed later, for their own changes.
-3. Ask the questions in review-questions.md, steps 3 and 5, screen by screen through the Secretary screens, computer first then phone.
-4. Ask them to list every flaw and error in their section (step 4). Write them down.
-5. Ask about their templates (step 6): any document they use as a template, where it is, which version, and what differs from the hub. Write each under "My templates" in `SecTreas - Harness/01_SPECS/secretary.md` following rules.md, part 9. Remind them to remove real data from any template file and to check the version with Trizy.
-6. Ask what they would like to add (step 7), then about guardrails (step 8). Write the guardrails under "My guardrails" in `SecTreas - Harness/01_SPECS/secretary.md`.
-7. Add each flaw, error or idea to "Your own tasks" in `SecTreas - Harness/01_SPECS/secretary.md` (S5, S6, ...). Give each one a due date from the timeline (rules.md, part 11) and ask them to confirm it. Show the full list and ask: "Is this list right? Would you like to add anything else?"
-8. Ask which task to start (suggest the one due soonest). Create its log from `SecTreas - Harness/04_LOGS/tasks/_TEMPLATE.md` (or read the existing one) and fill in part 1, Initial, with proof. S2 should start after S1 is merged.
-9. If the task changes what a document says or looks like, remind them to ask Trizy first and offer to write the message (rules.md, part 5).
-10. Explain the plan in simple words (which files, what will look different) and ask for a yes.
-11. If localhost is not set up, walk them through rules.md, part 1B.
-12. Ask, then run: `git checkout main`, `git pull`, `git checkout -b secretary/S<number>-<short-name>`.
-13. Make the change, following their guardrails. Log each change and each check in the task log as you go (rules.md, part 10). Ask them to check it on localhost, desktop and phone (rules.md, part 7). Run `npm run build`.
-14. Do not commit, push or open the pull request. Give them the exact commands to type (rules.md, part 2): `git status`, `git add <files>`, `git commit -m "<what changed>"` (plain; include their task file and task log in `git add`, never `PROGRESS.md`; the pull request title starts with the task number; rules.md, parts 12 and 13), `git push -u origin <branch>`, and the steps to open the pull request on GitHub. Write the pull request description for them to paste, the changelog entry, and finish the task log; both go in the same pull request.
-15. Write the two updates for Sean (rules.md, part 8): a pull request comment mentioning @SeanC1801 and a short direct message with the link. Ask: "Is it final, with no flaws or errors on your localhost?" and put the answer in both.
-16. Ask: "Would you like to start the next task?"
+2. Before writing anything, ask and then create the review branch: `git checkout main`, `git pull`, `git checkout -b secretary/S0-review` (or switch to it if it exists). The plan, due dates, review answers and new tasks all go on this branch.
+   - Then, on that branch: if their task file says "Deadline plan: not chosen yet", ask: "Can you finish all your tasks by Monday, November 30 (Plan A), or will you follow the soft deadline and finish before December 15 (Plan B)? Like: 'Plan A' or 'Plan B.'" Write the plan at the top of their task file, and write every task's due date from `SecTreas - Harness/01_SPECS/timeline.md`. These go on their T0 or S0 branch.
+3. Ask them to open https://sec-treas-hub.vercel.app/ on their computer and phone, and switch to Secretary on the Events page (review-questions.md, step 2). Localhost is only needed later, for their own changes.
+4. Ask the questions in review-questions.md, steps 3 and 5, screen by screen through the Secretary screens, computer first then phone.
+5. Ask them to list every flaw and error in their section (step 4). Write them down.
+6. Ask about their templates (step 6): any document they use as a template, where it is, which version, and what differs from the hub. Write each under "My templates" in `SecTreas - Harness/01_SPECS/secretary.md` following rules.md, part 9. Remind them to remove real data from any template file and to check the version with Trizy.
+7. Ask what they would like to add (step 7), then about guardrails (step 8). Write the guardrails under "My guardrails" in `SecTreas - Harness/01_SPECS/secretary.md`.
+8. Add each flaw, error or idea to "Your own tasks" in `SecTreas - Harness/01_SPECS/secretary.md` (S5, S6, ...). Give each one a due date from the timeline (rules.md, part 11) and ask them to confirm it. Show the full list and ask: "Is this list right? Would you like to add anything else?"
+9. First give the commands to open the review's pull request (with the changelog line in its description), and tell them Sean must merge it before any other task starts. Then ask which task to start (suggest the one due soonest). Create its log from `SecTreas - Harness/04_LOGS/tasks/_TEMPLATE.md` (or read the existing one) and fill in part 1, Initial, with proof. S2 should start after S1 is merged.
+10. If the task changes what a document says or looks like, remind them to ask Trizy first and offer to write the message (rules.md, part 5).
+11. Explain the plan in simple words (which files, what will look different) and ask for a yes.
+12. If localhost is not set up, walk them through rules.md, part 1B.
+13. Ask, then run: `git checkout main`, `git pull`, `git checkout -b secretary/S<number>-<short-name>`.
+14. Make the change, following their guardrails. Log each change and each check in the task log as you go (rules.md, part 10). Ask them to check it on localhost, desktop and phone (rules.md, part 7). Run `npm run build`.
+15. Do not commit, push or open the pull request. Give them the exact commands to type (rules.md, part 2): `git status`, `git add <files>`, `git commit -m "<what changed>"` (plain; include their task file and task log in `git add`, never `PROGRESS.md`; the pull request title starts with the task number; rules.md, parts 12 and 13), `git push -u origin <branch>`, `git pull origin main` before opening the pull request, and the steps to open it on GitHub. Write the pull request description for them to paste, including the changelog line (never edit changelog.md), and finish the task log.
+16. Write the two updates for Sean (rules.md, part 8): a pull request comment mentioning @SeanC1801 and a short direct message with the link. Ask: "Is it final, with no flaws or errors on your localhost?" and put the answer in both.
+17. Ask: "Would you like to start the next task?"
 
 ## Never
 

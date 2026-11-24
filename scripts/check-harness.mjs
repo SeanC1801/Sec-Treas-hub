@@ -30,9 +30,10 @@ if (changed.includes("PROGRESS.md"))
   fail("PROGRESS.md edited", "This pull request changes PROGRESS.md.", "Remove PROGRESS.md from your commits (`git checkout origin/main -- PROGRESS.md`, then commit). The Action rebuilds it on main by itself.");
 
 // Rule 2. The rules and the Action belong to Sean.
-const ruleFiles = changed.filter((f) => f.startsWith(".github/") || f.startsWith("scripts/") || f === "SecTreas - Harness/00_CORE/rubric.md");
+const SEAN_ONLY = ["SecTreas - Harness/00_CORE/rubric.md", "SecTreas - Harness/04_LOGS/changelog.md", ".gitignore"];
+const ruleFiles = changed.filter((f) => f.startsWith(".github/") || f.startsWith("scripts/") || SEAN_ONLY.includes(f));
 if (ruleFiles.length && !isLead)
-  fail("Rules changed", `Only Sean may change: ${ruleFiles.join(", ")}.`, "Undo those changes, or ask Sean to make them.");
+  fail("Sean's files changed", `Only Sean may change: ${ruleFiles.join(", ")}.`, "Undo those changes (`git checkout origin/main -- <file>`, then commit). For the changelog, put your entry in the pull request description instead; Sean adds it when merging.");
 
 // Rule 3. "verified" is written only by Sean.
 for (const f of Object.values(ROLES)) {

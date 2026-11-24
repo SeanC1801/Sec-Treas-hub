@@ -63,7 +63,7 @@ How to check any entry yourself: `git show <commit> --stat`.
 
 ## Format for new entries
 
-Add one entry per pull request when it is opened, and update it when Sean merges it.
+Officers write this entry in their pull request description. Sean copies it here when merging (officers never edit this file, so pull requests do not conflict).
 
 ```
 ## <date>: <task number> <short title> (<Nico or Ian>)

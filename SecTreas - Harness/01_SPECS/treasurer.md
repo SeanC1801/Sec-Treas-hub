@@ -47,6 +47,7 @@ Your templates, added by the AI from your answers ([rules.md](../00_CORE/rules.m
 3. Tell the AI about any templates you use (they go in "My templates" above) and your guardrails, if you want any ("My guardrails").
 4. Claude adds your answers to "Your own tasks" at the end of this file and asks: "Would you like to add anything else?"
 5. Before your first code change, set up localhost ([rules.md](../00_CORE/rules.md), part 1B).
+6. Open the pull request for this review on the review branch, and wait until Sean merges it before starting any other task ([rules.md](../00_CORE/rules.md), part 2).
 
 ## When a task is done (every task)
 
@@ -54,7 +55,7 @@ Your templates, added by the AI from your answers ([rules.md](../00_CORE/rules.m
 1. Check it on localhost, desktop and phone ([rules.md](../00_CORE/rules.md), part 7).
 2. If the task needed it, ask Alexis to validate ([rules.md](../00_CORE/rules.md), part 5).
 3. The AI gives you the commands; you type them yourself ([rules.md](../00_CORE/rules.md), part 2): `git status`, `git add ...`, `git commit -m "<what changed>"`, `git push -u origin <branch>`, then open the pull request on GitHub.
-4. Claude sets the task's Status to `submitted YYYY-MM-DD` and adds the `- Pull request:` link ([rules.md](../00_CORE/rules.md), part 12). Commit your task file, the task log and the changelog entry ([changelog.md](../04_LOGS/changelog.md)) with your work. Never commit `PROGRESS.md`; it updates on its own within the hour.
+4. Claude sets the task's Status to `submitted YYYY-MM-DD` and adds the `- Pull request:` link ([rules.md](../00_CORE/rules.md), part 12). Commit your task file and the task log with your work. The changelog line goes in the pull request description; Sean adds it to [changelog.md](../04_LOGS/changelog.md) when merging. Never commit `PROGRESS.md`; it updates on its own within the hour.
 4b. The harness check must be green, then Sean checks the [rubric](../00_CORE/rubric.md). The task counts as finished only when Sean sets it to "verified" ([rules.md](../00_CORE/rules.md), part 13).
 5. Tell Sean: a comment on the pull request mentioning @SeanC1801, and a direct message with the link. Say whether it is final (no flaws or errors on your localhost) ([rules.md](../00_CORE/rules.md), part 8).
 

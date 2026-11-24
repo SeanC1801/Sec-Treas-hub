@@ -37,7 +37,7 @@ jobs:
       - name: Build PROGRESS.md
         env:
           TZ: Asia/Manila
-        run: node scripts/progress.mjs --branches
+        run: node scripts/progress.mjs --branches --write
 
       - name: Commit PROGRESS.md if it changed
         run: |

@@ -21,6 +21,10 @@ The Action that rebuilds PROGRESS.md must push to `main`, which will be protecte
 
 The Progress workflow runs only from `main` (after merges, hourly, or by hand), so the token is never exposed to an officer's branch.
 
+Current token: `sectreas-progress`, created November 24, 2026, **expires Monday, February 22, 2027**. Renew it by February 15, 2027: on the token page click "Regenerate token", copy it, then run `pbpaste | gh secret set PROGRESS_TOKEN --repo SeanC1801/Sec-Treas-hub` and clear the clipboard (`echo -n "" | pbcopy`). If it lapses, the Progress runs fail (red ✗ in the Actions tab) and PROGRESS.md stops updating.
+
+Setting the secret from the clipboard with `gh` avoids pasting mistakes. On November 24, 2026, a value pasted into the web form was rejected ("could not read Username") until it was set this way.
+
 ## 3. Protect main with a ruleset
 
 Repository → Settings → Rules → Rulesets → New ruleset → New branch ruleset.

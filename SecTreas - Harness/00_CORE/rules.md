@@ -32,12 +32,20 @@ Use this once you start changing code, because your changes are not on the live 
 
 Nico and Ian edit some of the same files (`src/hub.js`, `src/hub.css`, `src/styles.css`), so each task gets its own branch.
 
-What the AI may do (after asking you first):
+Order of branches (this avoids merge conflicts):
+
+1. Your review comes first, on its own branch: `treasurer/T0-review` (Nico) or `secretary/S0-review` (Ian). Claude creates it at the very start of your first session, before writing anything (your plan, due dates and new tasks all go there).
+2. Open the review's pull request as soon as the review is done, and wait until Sean merges it before starting any other task. The review sets every due date, so other branches made before it is merged will conflict with it.
+3. Every other task starts from an up-to-date `main`, on its own branch.
+4. Before you open a pull request, and again before pushing a fix to it, bring in the latest `main` with `git pull origin main`. If git reports a conflict, ask Claude to resolve it (keep both sides' lines unless they truly disagree), then commit.
+
+What Claude may do (after asking you first):
 
 - Update `main` and create the branch for a task:
   - `git checkout main`
   - `git pull`
   - `git checkout -b treasurer/T1-tracker-buttons` (Nico) or `git checkout -b secretary/S1-minutes-bar` (Ian)
+- Bring the latest `main` into your branch: `git pull origin main`
 - Make the code change.
 
 What the AI must never do: commit, push, or open the pull request. It writes the exact commands for you, and you type them yourself. Like this:
@@ -56,7 +64,8 @@ What the AI must never do: commit, push, or open the pull request. It writes the
    - how you checked it on desktop and on phone,
    - desktop and phone screenshots,
    - whether your senior validated it,
-   - whether it is final (no flaws or errors on your localhost) or still in progress.
+   - whether it is final (no flaws or errors on your localhost) or still in progress,
+   - the changelog line for Sean (in the format at the end of [changelog.md](../04_LOGS/changelog.md)). Do not edit `changelog.md` itself: Sean adds your line when merging, so Nico's and Ian's pull requests never conflict.
 
 Other rules:
 
@@ -175,7 +184,7 @@ Every task is written down from the first look to the final pull request. This k
    5. Checks: desktop, phone, console, `npm run build`, and anything not checked.
    6. Commands: the git commands it gave you to type.
    7. Final: the pull request link, whether it is final, and whether Sean was told.
-4. When you open the pull request, the AI writes the entry for [changelog.md](../04_LOGS/changelog.md), using the format at its end. The task log and the changelog entry go in the same pull request.
+4. When you open the pull request, Claude writes the changelog line (format at the end of [changelog.md](../04_LOGS/changelog.md)) into the pull request description. The task log goes in the pull request; `changelog.md` itself is Sean's, and the harness check blocks edits to it.
 5. Rules for what goes in a log:
    - Only what was seen or said: give the file path, the command output, the screen and size, or quote the person.
    - If something was not checked, write "not checked". Never write "works" without checking.
@@ -194,7 +203,7 @@ You choose your deadline plan once, at the start. The dates are in [timeline.md]
    - Plan B: urgent bugs Mon, Nov 30; everything else Thu, Dec 10.
    - Claude suggests the date, you confirm it.
 4. At the start of every session, Claude says which task is due next and how many days are left.
-5. "Due" means the pull request is open and marked final. Write the due date and the date it was done in the task log and the changelog entry.
+5. "Due" means the pull request is open and marked final. Write the due date and the date it was done in the task log and in the changelog line of the pull request description.
 6. If a task will be late, tell Sean that day and write it in [blocked.md](../03_TRACKING/blocked.md) with the new date you can make. Do not move a due date without telling Sean. You may switch from Plan A to Plan B once, after telling Sean.
 
 ## Part 12. The progress file (PROGRESS.md)
@@ -214,7 +223,7 @@ Sean follows your progress in one file at the top of the repository: [PROGRESS.m
    - `- Pull request: <link>` once you open one.
 3. Claude updates those lines when you choose your plan, when a task is added, when it starts, when it is submitted, when it is returned, and when a date changes. They go into your next commit on the task's branch. Push your branch right after a status change (Claude gives you the commands), because Sean only sees what is pushed.
 4. Your branch only counts for its own task: `treasurer/T1-...` updates T1. New tasks from your review (on your T0 or S0 branch) show up too.
-5. To preview the table on your computer, Claude can run `npm run progress`. Do not commit the result.
+5. To preview the table on your computer, Claude can run `npm run progress`. It writes `PROGRESS.preview.md`, which git ignores, so it can never end up in a commit.
 6. If the table looks wrong, the task files are right. Tell Sean; do not edit `PROGRESS.md`.
 
 ## Part 13. Checks, rubric and verification
@@ -226,7 +235,7 @@ Sean checks that your progress is real. Two things do this.
 It runs from `main`, so it cannot be changed by a pull request. It marks your pull request red, and blocks the merge, if:
 
 1. `PROGRESS.md` is changed.
-2. `.github/`, `scripts/` or the rubric is changed (only Sean may).
+2. `.github/`, `scripts/`, `.gitignore`, the rubric or `changelog.md` is changed (only Sean may).
 3. A task is set to "verified" (only Sean may).
 4. The branch is not named `treasurer/T<n>-...` or `secretary/S<n>-...`, or the pull request title does not include the task number.
 5. You changed the other officer's task file.

@@ -1,8 +1,8 @@
 // Builds PROGRESS.md (repo root) from the task files in "SecTreas - Harness/01_SPECS/".
 //
-//   npm run progress                 reads the task files in this folder only
-//   npm run progress -- --branches   also reads every treasurer/* and secretary/* branch on origin
-//                                    (this is what the GitHub Action runs on main)
+//   npm run progress                          preview: writes PROGRESS.preview.md (not committed)
+//   node scripts/progress.mjs --branches --write   what the GitHub Action runs on main: reads main and
+//                                                  every treasurer/* and secretary/* branch, writes PROGRESS.md
 //
 // It only reads what is written in the task files (Due, Status, From, Pull request lines),
 // so the table never says more than the task files do.
@@ -23,6 +23,9 @@ const PEOPLE = [
 ];
 const PLAN_END = { A: "2026-11-30", B: "2026-12-14" };
 const USE_BRANCHES = process.argv.includes("--branches");
+// Only the GitHub Action passes --write. Local runs write PROGRESS.preview.md (ignored by git),
+// so a preview can never end up in an officer's commit.
+const OUT = process.argv.includes("--write") ? "PROGRESS.md" : "PROGRESS.preview.md";
 
 const pad = (n) => String(n).padStart(2, "0");
 const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -50,7 +53,7 @@ function readPerson(p) {
       const review = own === `${p.letter}0`; // the review branch (T0/S0) is where the plan's due dates are written
       if (review && !m.due && t.due && t.id !== own) { m.due = t.due; m.source = m.source === "main" ? `main (due date from ${branch})` : m.source; }
       if (t.id !== own || m.status.key === "verified") continue; // a branch speaks only for its own task
-      if (t.status.rank >= m.status.rank) main.tasks.set(t.id, { ...m, due: t.due || m.due, status: t.status, pr: t.pr || m.pr, source: branch });
+      if (t.status.rank > m.status.rank || (t.status.rank === m.status.rank && t.due && t.due !== m.due)) main.tasks.set(t.id, { ...m, due: t.due || m.due, status: t.status, pr: t.pr || m.pr, source: branch });
     }
   }
   return { ...p, ...main };
@@ -97,5 +100,5 @@ for (const p of people) {
   }
 }
 md += `\n## How this file is made\n\n- Each row comes from a task heading (like \`## T1. ...\`) and its \`- Due:\`, \`- Status:\`, \`- From:\` and \`- Pull request:\` lines.\n- A GitHub Action rebuilds it on main every hour and after every merge, reading main and every officer branch ("Read from" shows which). A branch only counts for its own task, and "verified" only counts from main.\n- "Days left" is counted from the day the file was generated, in Manila time.\n`;
-writeFileSync(join(root, "PROGRESS.md"), md);
-console.log(`PROGRESS.md written (${people.map((p) => `${p.who}: ${p.tasks.size} tasks`).join(", ")}${USE_BRANCHES ? ", branches read" : ""}).`);
+writeFileSync(join(root, OUT), md);
+console.log(`${OUT} written (${people.map((p) => `${p.who}: ${p.tasks.size} tasks`).join(", ")}${USE_BRANCHES ? ", branches read" : ""}).`);
