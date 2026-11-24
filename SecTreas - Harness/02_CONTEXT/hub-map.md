@@ -22,6 +22,8 @@ Back to: [agents.md](../00_CORE/agents.md). Checked against the code on November
 - `src/styles.css`, `src/polish.css`, `src/proof.css`: shared styles, phone polish, proof-step styles. (Shared)
 - `public/assets/`: `letterhead.png`, `cert-bg.jpg`, `auf-acm.png`, `auf-ccs.png`, and the sky backgrounds.
 - `prototypes/archive/`: old design prototypes. Not used by the app.
+- `scripts/progress.mjs`, `scripts/check-harness.mjs`, `scripts/lib/tasks.mjs`: build PROGRESS.md and check pull requests (Sean's; do not change).
+- `.github/workflows/`: the Progress Action and the Harness check. `.github/pull_request_template.md`: the pull request form with the rubric.
 
 ## Screens (the `data-view` on `#device`)
 

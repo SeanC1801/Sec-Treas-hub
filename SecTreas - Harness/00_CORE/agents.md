@@ -8,7 +8,7 @@ Only two people work on the hub: Nico (Treasurer) and Ian (Secretary). Ask first
 
 ## Routing table: what to read, and when
 
-All paths are inside `Harness/`.
+All paths are inside `SecTreas - Harness/`.
 
 ### 00_CORE: how to work
 
@@ -18,12 +18,17 @@ All paths are inside `Harness/`.
 ### 01_SPECS: what to build
 
 - [`01_SPECS/treasurer.md`](../01_SPECS/treasurer.md): Nico's tasks (T0 to T4, then "Your own tasks"), plus "My guardrails" and "My templates". Read when helping Nico.
+- [`01_SPECS/timeline.md`](../01_SPECS/timeline.md): every deadline, from the review to the November 30 launch, including the database and security work. Read every session.
+- [`PROGRESS.md`](../../PROGRESS.md) (repo root): Sean's progress table, rebuilt by a GitHub Action from the task files on main and on the officers' branches. Never edit or commit it.
+- [`00_CORE/rubric.md`](rubric.md): the 8 pass/fail checks Sean uses before setting a task to "verified". Read before submitting a task.
+- [`02_CONTEXT/github-setup.md`](../02_CONTEXT/github-setup.md): Sean's one-time GitHub setup (branch rules, token). Not for Nico and Ian.
 - [`01_SPECS/secretary.md`](../01_SPECS/secretary.md): Ian's tasks (S0 to S4, then "Your own tasks"), plus "My guardrails" and "My templates". Read when helping Ian.
 
 ### 02_CONTEXT: facts about the hub and the people
 
 - [`02_CONTEXT/overview.md`](../02_CONTEXT/overview.md): who is who, links, and the order of work. Read every session.
 - [`02_CONTEXT/hub-map.md`](../02_CONTEXT/hub-map.md): how the code is laid out, where data is saved, page sizes, the status chain. Read before changing any code. Trust the code over this file if they disagree, and note the difference in [`03_TRACKING/learnings.md`](../03_TRACKING/learnings.md).
+- [`02_CONTEXT/backend-proposal.md`](../02_CONTEXT/backend-proposal.md): the proposed database and security design (Supabase, for all of CCS). A proposal, not a decision. Read before any backend work.
 - [`02_CONTEXT/review-questions.md`](../02_CONTEXT/review-questions.md): the questions to ask before any work. Read at the start of the first session, and whenever the person wants a new review.
 
 ### 03_TRACKING: what is known
@@ -41,12 +46,12 @@ All paths are inside `Harness/`.
 ## Steps, every session
 
 1. Ask: "Are you Nico (Treasurer) or Ian (Secretary)?"
-2. Read [`00_CORE/rules.md`](rules.md), [`02_CONTEXT/overview.md`](../02_CONTEXT/overview.md), [`04_LOGS/changelog.md`](../04_LOGS/changelog.md), and their task file in `01_SPECS/`.
-3. First session only: ask the questions in [`02_CONTEXT/review-questions.md`](../02_CONTEXT/review-questions.md) one at a time, in simple words, each with a "Like:" example. Have them list every flaw and error in their section, on computer and phone. Ask about their templates, guardrails, and anything they want to add.
+2. Read [`00_CORE/rules.md`](rules.md), [`02_CONTEXT/overview.md`](../02_CONTEXT/overview.md), [`01_SPECS/timeline.md`](../01_SPECS/timeline.md), [`04_LOGS/changelog.md`](../04_LOGS/changelog.md), and their task file in `01_SPECS/`. Tell them which task is due next and how many days are left.
+3. First session only: ask the questions in [`02_CONTEXT/review-questions.md`](../02_CONTEXT/review-questions.md) one at a time, in simple words, each with a "Like:" example. Have them list every flaw and error in their section, on computer and phone. Ask about their templates, guardrails, and anything they want to add. Give every new task a due date (rules.md, part 11).
 4. Ask which task to work on. If its log in [`04_LOGS/tasks/`](../04_LOGS/tasks/) exists, read it and continue from where it stopped. If not, create it.
 5. Remind them to ask their senior (Alexis for Nico, Trizy for Ian) before changing what a document says or looks like.
 6. Work one task at a time on its own branch. Update the task log after every step ([`00_CORE/rules.md`](rules.md), part 10).
-7. Never commit, push or open a pull request yourself. Give them the exact commands to type.
+7. Never commit, push or open a pull request yourself. Give them the exact commands to type. Keep the task file's Due, Status, From and Pull request lines current; never edit or commit `PROGRESS.md` (`00_CORE/rules.md`, part 12). Never set "verified"; set "submitted YYYY-MM-DD" when the task is final, and remind them the harness check must be green and Sean checks the rubric (`00_CORE/rules.md`, part 13).
 8. After the pull request, write the two updates for Sean (a pull request comment and a direct message), saying whether it is final. Add the line for [`04_LOGS/changelog.md`](../04_LOGS/changelog.md).
 
 ## Never guess

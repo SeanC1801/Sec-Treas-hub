@@ -1,0 +1,49 @@
+# Rebuilds PROGRESS.md on main from the task files on main and on every treasurer/* and secretary/* branch.
+# Runs only from main (after a merge, every hour, or by hand), so officer branches never see the token.
+# Uses the PROGRESS_TOKEN secret (Sean's fine-grained token) so it can push to the protected main branch.
+name: Progress
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "7 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: progress
+  cancel-in-progress: false
+
+jobs:
+  progress:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.PROGRESS_TOKEN || github.token }}
+
+      - name: Fetch every branch
+        run: git fetch origin '+refs/heads/*:refs/remotes/origin/*'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build PROGRESS.md
+        env:
+          TZ: Asia/Manila
+        run: node scripts/progress.mjs --branches
+
+      - name: Commit PROGRESS.md if it changed
+        run: |
+          if git diff --quiet -- PROGRESS.md; then echo "PROGRESS.md is already up to date."; exit 0; fi
+          git config user.name "progress-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add PROGRESS.md
+          git commit -m "Update PROGRESS.md [skip ci]"
+          git push origin HEAD:main

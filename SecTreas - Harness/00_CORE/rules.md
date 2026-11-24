@@ -43,8 +43,8 @@ What the AI may do (after asking you first):
 What the AI must never do: commit, push, or open the pull request. It writes the exact commands for you, and you type them yourself. Like this:
 
 1. See what changed: `git status`
-2. Add the changed files: `git add src/hub.css` (the AI lists the exact files)
-3. Commit: `git commit -m "Budget Tracker: make the Open buttons easier to tap"`
+2. Add the changed files: `git add src/hub.css "SecTreas - Harness/01_SPECS/treasurer.md" "SecTreas - Harness/04_LOGS"` (Claude lists the exact files: your code, your task file and your task log. Never `PROGRESS.md`.)
+3. Commit: `git commit -m "Budget Tracker: make the Open buttons easier to tap"`. The pull request title starts with the task, like "T1: Budget Tracker buttons easier to tap" ([part 13](#part-13-checks-rubric-and-verification)).
 4. Push: `git push -u origin treasurer/T1-tracker-buttons`
 5. Open the pull request on GitHub:
    - Go to https://github.com/SeanC1801/Sec-Treas-hub
@@ -67,7 +67,7 @@ Other rules:
 
 ## Part 3. What not to touch
 
-- No backend: no Supabase, servers, databases, sign-in providers or API keys. Sean is designing the backend and its security separately.
+- No backend: no Supabase, servers, databases, sign-in providers or API keys. Sean leads the backend and its security ([timeline.md](../01_SPECS/timeline.md)). Only work on it if Sean gives you a backend task there, and follow Sean's instructions.
 - No real data. Use sample receipts, sample invoice numbers and sample amounts only. No real purchases, phone numbers, student numbers or ID photos in the code.
 - Do not change document formats (letterhead, page sizes, Arial on documents, the approval chain Draft → President → Adviser → CSC Treasurer → CSC) without your senior's and Sean's yes.
 - Do not add a new library or package without asking Sean first.
@@ -182,3 +182,63 @@ Every task is written down from the first look to the final pull request. This k
    - Never invent results, approvals, links or data.
    - If you are blocked or unsure, write it in [blocked.md](../03_TRACKING/blocked.md) and stop.
 6. New surprises in the code go in [learnings.md](../03_TRACKING/learnings.md). New decisions from Sean go in [decisions.md](../03_TRACKING/decisions.md).
+
+## Part 11. Deadlines
+
+You choose your deadline plan once, at the start. The dates are in [timeline.md](../01_SPECS/timeline.md).
+
+1. Claude asks once: "Can you finish all your tasks by Monday, November 30 (Plan A), or will you follow the soft deadline and finish before December 15 (Plan B)?"
+2. Claude writes your answer at the top of your task file ("Deadline plan: A" or "B", with the date you chose), then writes each task's due date from the timeline on the task, like `- Due: 2026-11-26 (Thursday, Plan A)`.
+3. Every task you add during the review gets a due date from your plan:
+   - Plan A: urgent bugs Fri, Nov 27; everything else Sun, Nov 29.
+   - Plan B: urgent bugs Mon, Nov 30; everything else Thu, Dec 10.
+   - Claude suggests the date, you confirm it.
+4. At the start of every session, Claude says which task is due next and how many days are left.
+5. "Due" means the pull request is open and marked final. Write the due date and the date it was done in the task log and the changelog entry.
+6. If a task will be late, tell Sean that day and write it in [blocked.md](../03_TRACKING/blocked.md) with the new date you can make. Do not move a due date without telling Sean. You may switch from Plan A to Plan B once, after telling Sean.
+
+## Part 12. The progress file (PROGRESS.md)
+
+Sean follows your progress in one file at the top of the repository: [PROGRESS.md](../../PROGRESS.md). It shows every task: who, due date, status, days left, when it was submitted and verified, the pull request, and where the status was read from.
+
+1. You never edit or commit `PROGRESS.md`. A GitHub Action rebuilds it on `main` every hour and after every merge. It reads your task file on `main` and on your branches, so your progress shows within the hour, even before Sean merges.
+2. What you do keep up to date is your task file. Each task has these lines, and Claude updates them:
+   - `- Due: YYYY-MM-DD (<weekday>, Plan A or B)`, or "not set yet" until you choose a plan,
+   - `- Status:` one of
+     - `not started`
+     - `in progress` (from your first change on the task's branch)
+     - `submitted YYYY-MM-DD` (the pull request is final: no flaws or errors on your localhost)
+     - `returned YYYY-MM-DD: <reason>` (written by Sean: fix it and submit again)
+     - `verified YYYY-MM-DD` (written only by Sean, after the rubric)
+   - `- From: Sean's starting list`, `senior's suggestion`, or `your review`,
+   - `- Pull request: <link>` once you open one.
+3. Claude updates those lines when you choose your plan, when a task is added, when it starts, when it is submitted, when it is returned, and when a date changes. They go into your next commit on the task's branch. Push your branch right after a status change (Claude gives you the commands), because Sean only sees what is pushed.
+4. Your branch only counts for its own task: `treasurer/T1-...` updates T1. New tasks from your review (on your T0 or S0 branch) show up too.
+5. To preview the table on your computer, Claude can run `npm run progress`. Do not commit the result.
+6. If the table looks wrong, the task files are right. Tell Sean; do not edit `PROGRESS.md`.
+
+## Part 13. Checks, rubric and verification
+
+Sean checks that your progress is real. Two things do this.
+
+### The automatic harness check (on every pull request)
+
+It runs from `main`, so it cannot be changed by a pull request. It marks your pull request red, and blocks the merge, if:
+
+1. `PROGRESS.md` is changed.
+2. `.github/`, `scripts/` or the rubric is changed (only Sean may).
+3. A task is set to "verified" (only Sean may).
+4. The branch is not named `treasurer/T<n>-...` or `secretary/S<n>-...`, or the pull request title does not include the task number.
+5. You changed the other officer's task file.
+6. Your task's status is still "not started" (the status was skipped).
+7. Your task says "submitted" without a date, without the pull request link, without a task log in `04_LOGS/tasks/`, or with the log's Checks part (desktop, phone, build) not filled in.
+8. A due date changed without an entry for that task in [blocked.md](../03_TRACKING/blocked.md).
+
+The check's summary says what to fix in plain words. Ask Claude to fix it, then push again.
+
+### The rubric (Sean, before a task counts as finished)
+
+- When the check is green, Sean goes through the 8 checks in [rubric.md](rubric.md): done, desktop and phone, builds cleanly, logged, senior check, stayed in scope, safe data, on time.
+- All pass: Sean merges and sets "verified" on `main`. Only then does [PROGRESS.md](../../PROGRESS.md) count the task as finished.
+- Any fail: Sean sets "returned" with the reason on your branch. Fix it, then set "submitted" again.
+- Before submitting, tick the rubric in your pull request yourself, but only what is true. Never tick something you did not check.

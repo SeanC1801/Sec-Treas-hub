@@ -7,8 +7,9 @@ Copy this file when a task starts. Name the copy after the branch, like `T1-trac
 - Who: <Nico / Ian>
 - Task file: <01_SPECS/treasurer.md, T1>
 - Branch: <treasurer/T1-tracker-buttons>
+- Due: <date from the task file>
 - Started: <date>
-- Status: <started / in progress / waiting for senior / ready for PR / final / merged>
+- Status: <in progress / waiting for senior / submitted / returned / verified>
 
 ## 1. Initial: how it is before any change
 
@@ -47,7 +48,9 @@ Copy this file when a task starts. Name the copy after the branch, like `T1-trac
 ```
 git status
 git add <files>
-git commit -m "<message>"
+git add <files> "SecTreas - Harness/01_SPECS/<your task file>" "SecTreas - Harness/04_LOGS"
+git commit -m "<what changed>"
+# never add PROGRESS.md
 git push -u origin <branch>
 ```
 
@@ -57,4 +60,5 @@ git push -u origin <branch>
 - Final: <yes, no flaws or errors on localhost / no, still to do: ...>
 - Sean told: pull request comment <yes/no>, direct message <yes/no>
 - Changelog entry added: <yes/no>
+- Due: <date> / Done (pull request final): <date> / Late: <no, or why and the new date Sean agreed>
 - Merged by Sean: <commit, date>

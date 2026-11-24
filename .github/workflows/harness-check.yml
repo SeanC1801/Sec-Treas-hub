@@ -1,0 +1,39 @@
+# Checks every pull request into main against the harness rules (SecTreas - Harness/00_CORE/rules.md, part 13).
+# pull_request_target runs THIS file and scripts/ from main, so a pull request cannot change the rules it is checked by.
+# The pull request's files are only read with git (never run), and no secrets are used.
+name: Harness check
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  harness-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main (the rules)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fetch the pull request as data
+        run: git fetch origin "pull/${{ github.event.pull_request.number }}/head:pr-head"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Check the harness rules
+        env:
+          BASE_REF: origin/main
+          PR_REF: pr-head
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          TITLE: ${{ github.event.pull_request.title }}
+        run: node scripts/check-harness.mjs

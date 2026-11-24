@@ -33,3 +33,11 @@ Back to: [agents.md](../00_CORE/agents.md). These were decided by Sean (the proj
 - The AI may create branches and pull `main`; it never commits, pushes or opens a pull request. The officer types those commands. 2026-11-20.
 - After each pull request, the officer tells Sean in a pull request comment and a direct message, saying whether it is final. 2026-11-20.
 - Template files go into the code only as blank copies, and only after asking Sean. 2026-11-20.
+- Original deadline: everything, including the database and security, by Monday, November 30, 2026 (2026-11-20). Updated on 2026-11-24: Plan A or Plan B per person, and backend dates set by Sean after planning with the seniors.
+- Progress is tracked in `PROGRESS.md` at the repo root. A GitHub Action rebuilds it on main hourly and after merges, reading main and every officer branch; officers never commit it. Commit messages stay plain. 2026-11-24 (replaces the commit-message rule of 2026-11-20).
+- Each of Nico and Ian chooses once: Plan A (everything by Mon, Nov 30) or Plan B (soft deadline, before Dec 15). 2026-11-24.
+- The seniors' suggestions (Nov 24) are tasks T5 to T9 (Nico) and S5 to S9 (Ian). Email to the President and access settings are built as screens now and connected to the backend later. 2026-11-24.
+- Deploying to the whole campus is a long-term goal, not this round. The hub stays ACM-only for now. 2026-11-24.
+- The repository stays public (the old receipts in git history and officer names are acceptable). Public means branch rules and checks are free. 2026-11-24.
+- A task is finished only when Sean verifies it against the 8-point pass/fail rubric (`00_CORE/rubric.md`). Officers set "submitted"; only Sean sets "verified" or "returned". 2026-11-24.
+- Every pull request into main must pass the harness check (`.github/workflows/harness-check.yml`), which runs from main so it cannot be bypassed. 2026-11-24.

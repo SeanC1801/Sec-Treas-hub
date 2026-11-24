@@ -2,7 +2,7 @@
 
 **What this repo is for:** the code and design files for the SecTreas Hub, a web app where the ACM-AUF Treasurer and Secretary make their official documents in one place, without retyping or reformatting them.
 
-**Officers working on the hub (Nico and Ian):** start at [Harness/START-HERE.md](Harness/START-HERE.md).
+**Officers working on the hub (Nico and Ian):** start at [SecTreas - Harness/START-HERE.md](SecTreas%20-%20Harness/START-HERE.md).
 
 ## Who it's for
 

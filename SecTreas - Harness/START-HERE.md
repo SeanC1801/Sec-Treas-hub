@@ -32,7 +32,9 @@ You stay in control. Claude asks before it does anything, and it never saves (co
 
 - Ask your senior before changing what a document says or looks like: Alexis for Nico, Trizy for Ian.
 - Use sample data only. Never put real receipts, names or signatures into the code or the AI chat.
-- Deadline: end of November 2026.
+- Deadline: at the start, Claude asks you to choose Plan A (everything by Monday, November 30) or Plan B (soft deadline, before December 15). Each task then gets its due date from [timeline.md](01_SPECS/timeline.md).
+- Your progress shows in [PROGRESS.md](../PROGRESS.md) at the top of the repository. It updates by itself within the hour from your task file. Never edit or commit it.
+- Sean checks every finished task with a [rubric](00_CORE/rubric.md) of 8 pass/fail checks. A task only counts as finished when Sean marks it "verified". An automatic check on every pull request also makes sure your status is up to date.
 
 ## What is inside
 
@@ -43,9 +45,11 @@ You stay in control. Claude asks before it does anything, and it never saves (co
 - `01_SPECS/`: your tasks.
   - [treasurer.md](01_SPECS/treasurer.md): Nico's tasks, guardrails and templates.
   - [secretary.md](01_SPECS/secretary.md): Ian's tasks, guardrails and templates.
+  - [timeline.md](01_SPECS/timeline.md): every due date, up to November 30.
 - `02_CONTEXT/`: facts.
   - [overview.md](02_CONTEXT/overview.md): who is who, links, and the order of work.
   - [hub-map.md](02_CONTEXT/hub-map.md): how the code is laid out.
+  - [backend-proposal.md](02_CONTEXT/backend-proposal.md): the proposed database and security design.
   - [review-questions.md](02_CONTEXT/review-questions.md): the questions Claude asks you.
 - `03_TRACKING/`: what is known.
   - [findings.md](03_TRACKING/findings.md): the November 20 check and the bugs found.
@@ -60,3 +64,5 @@ Outside this folder, in the repo:
 
 - [CLAUDE.md](../CLAUDE.md): tells every Claude Code session to read this harness.
 - `.claude/skills/`: the two skills, [/treasurer-handoff](../.claude/skills/treasurer-handoff/SKILL.md) and [/secretary-handoff](../.claude/skills/secretary-handoff/SKILL.md).
+- [PROGRESS.md](../PROGRESS.md): the progress table Sean reads (rebuilt automatically).
+- [rubric.md](00_CORE/rubric.md): how Sean checks your work.

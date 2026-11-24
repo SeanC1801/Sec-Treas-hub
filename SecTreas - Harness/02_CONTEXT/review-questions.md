@@ -13,6 +13,11 @@ How the AI asks:
 
 1. "Are you Nico (Treasurer) or Ian (Secretary)?"
    - If the answer is anyone else: "This handoff is only for Nico and Ian. Please talk to Sean." Then stop.
+2. Only if their task file says "Deadline plan: not chosen yet":
+   - "Can you finish all your tasks by Monday, November 30 (Plan A), or will you follow the soft deadline and finish before December 15 (Plan B)? Like: 'Plan A' or 'Plan B.'"
+   - If they are unsure, show them the dates for both plans from [timeline.md](../01_SPECS/timeline.md).
+   - Write the answer at the top of their task file, and write each task's due date from the timeline ([rules.md](../00_CORE/rules.md), parts 11 and 12). These changes go on their T0 or S0 branch; [PROGRESS.md](../../PROGRESS.md) picks them up within the hour.
+3. Say which task is due next and how many days are left. Like: "Your next task is T0, due Wednesday, November 25: 1 day left."
 
 ## Step 2. Open the hub
 
@@ -87,7 +92,10 @@ The hub makes documents from templates. Find out which ones they use, so the hub
    - what they saw or want,
    - computer, phone, or both,
    - the screen,
-   - steps to see it, if it is a bug.
+   - steps to see it, if it is a bug,
+   - a due date from their plan in [timeline.md](../01_SPECS/timeline.md) ([rules.md](../00_CORE/rules.md), part 11). Suggest it and ask: "Is this date okay? Like: 'yes' or 'can it be Friday instead?'"
+   - the lines `- Status: not started` and `- From: your review (<date>)`.
+   [PROGRESS.md](../../PROGRESS.md) shows the new tasks within the hour, once they are pushed on the T0 or S0 branch.
 2. Show the full list and ask: "Is this list right? Would you like to add anything else? Like: 'yes, that's all' or 'add one more.'"
 3. Ask: "Which task do you want to do first? Like: 'T1.'"
 4. Remind them: "If this task changes what a document says or looks like, ask your senior first (Alexis for Nico, Trizy for Ian). Would you like me to write that message for you?"

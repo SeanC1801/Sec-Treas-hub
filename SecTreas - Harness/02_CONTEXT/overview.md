@@ -1,13 +1,13 @@
 # SecTreas Hub handoff: overview
 
-The Harness folder tells Nico (Treasurer) and Ian (Secretary), and Claude Code, what is left to do on the SecTreas Hub before the backend is built.
+The SecTreas - Harness folder tells Nico (Treasurer) and Ian (Secretary), and Claude Code, what is left to do on the SecTreas Hub before the backend is built.
 
 - Project lead: Sean Caling (GitHub: SeanC1801)
 - Working on the hub: Nico (Christian Dominic Liwanag, Treasurer) and Ian (Ian Patrick Flores, Secretary). Nobody else.
 - Seniors who validate the work: Alexis (senior Treasurer) for Nico, Trizy (senior Secretary) for Ian.
 - Live hub (always shows the latest `main`): https://sec-treas-hub.vercel.app/
 - Repository: https://github.com/SeanC1801/Sec-Treas-hub (private; ask Sean to add you as a collaborator)
-- Deadline for this round: end of November 2026
+- Deadline: Plan A (everything by Monday, November 30, 2026) or Plan B (before December 15, 2026), chosen once by each person ([timeline.md](../01_SPECS/timeline.md)). Progress: [PROGRESS.md](../../PROGRESS.md)
 - Written: November 20, 2026
 
 ## Who reads what
@@ -49,7 +49,12 @@ The Harness folder tells Nico (Treasurer) and Ian (Secretary), and Claude Code, 
 - [review-questions.md](review-questions.md): the questions to answer before any work.
 - [treasurer.md](../01_SPECS/treasurer.md): Nico's tasks, in order.
 - [secretary.md](../01_SPECS/secretary.md): Ian's tasks, in order.
+- [timeline.md](../01_SPECS/timeline.md): Plan A (by November 30) and Plan B (before December 15), with a due date for every task.
+- [PROGRESS.md](../../PROGRESS.md) (repo root): the progress table, rebuilt automatically every hour.
+- [rubric.md](../00_CORE/rubric.md): the 8 checks Sean uses before a task counts as finished.
+- [github-setup.md](github-setup.md): Sean's one-time GitHub setup.
 - [findings.md](../03_TRACKING/findings.md): the November 20 check of the hub, and the bugs found.
+- [backend-proposal.md](backend-proposal.md): the proposed database and security design, for discussion with the seniors.
 - [hub-map.md](hub-map.md): facts about the code: files, screens, where data is saved, paper sizes, the status chain.
 - [decisions.md](../03_TRACKING/decisions.md): what Sean has already decided.
 - [learnings.md](../03_TRACKING/learnings.md): surprises and pitfalls in the code.

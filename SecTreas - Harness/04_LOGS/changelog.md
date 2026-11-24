@@ -48,7 +48,16 @@ How to check any entry yourself: `git show <commit> --stat`.
 
 - Checked every screen on desktop and phone. Results in [findings.md](../03_TRACKING/findings.md).
 - 0568bc9: Added the `Harness/` folder: the handoff for Nico and Ian, with tasks, rules, review questions, decisions, learnings, and these logs.
-- (next commit): every Harness file links back to `agents.md`; the skills moved to `.claude/skills/` so they work with no install; `CLAUDE.md` added at the repo root (replacing `AGENTS.md`); START-HERE simplified for Claude Code.
+- (next commit): the folder was renamed from `Harness/` to `SecTreas - Harness/`, and every path now uses the new name; deadlines added (`01_SPECS/timeline.md`, a due date on every task). Every harness file links back to `agents.md`; the skills moved to `.claude/skills/` so they work with no install; `CLAUDE.md` added at the repo root (replacing `AGENTS.md`); START-HERE simplified for Claude Code.
+
+## November 24, 2026: progress file, deadline plans, seniors' suggestions (not committed yet when written)
+
+- `PROGRESS.md` at the repo root, made by `npm run progress` (`scripts/progress.mjs`) from the task files. Replaces putting the due date in commit messages.
+- Deadline plans: Plan A (everything by Mon, Nov 30) or Plan B (before Dec 15), chosen once by Nico and by Ian ([timeline.md](../01_SPECS/timeline.md)).
+- The seniors' suggestions became tasks T5 to T9 (Nico) and S5 to S9 (Ian). Own tasks from the review now start at T10 and S10.
+- `AGENTS.md` (for Codex) points to `.agents/skills/`.
+- Progress Action and harness check: `.github/workflows/progress.yml` rebuilds `PROGRESS.md` on main from main and every officer branch; `.github/workflows/harness-check.yml` checks every pull request (status not skipped, proof before "submitted", no hand edits, dates not moved silently). Rubric: [rubric.md](../00_CORE/rubric.md). Sean's setup: [github-setup.md](../02_CONTEXT/github-setup.md).
+- Backend proposal for the seniors: [backend-proposal.md](../02_CONTEXT/backend-proposal.md) (Supabase free tier, built for all of CCS). Not decided yet.
 
 ---
 
@@ -65,6 +74,7 @@ Add one entry per pull request when it is opened, and update it when Sean merges
 - Files: <list>
 - Checked on: desktop <yes/no>, phone <yes/no>, build <passed/failed>
 - Senior validation: <name and date, or "not needed">
+- Due: <date> / Done: <date>
 - Final: <yes, no flaws or errors on localhost / no, still to do: ...>
 - Merged by Sean: <commit, date> (filled in after the merge)
 - Task log: 04_LOGS/tasks/<file>.md
