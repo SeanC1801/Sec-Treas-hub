@@ -59,6 +59,10 @@ How to check any entry yourself: `git show <commit> --stat`.
 - Progress Action and harness check: `.github/workflows/progress.yml` rebuilds `PROGRESS.md` on main from main and every officer branch; `.github/workflows/harness-check.yml` checks every pull request (status not skipped, proof before "submitted", no hand edits, dates not moved silently). Rubric: [rubric.md](../00_CORE/rubric.md). Sean's setup: [github-setup.md](../02_CONTEXT/github-setup.md).
 - Backend proposal for the seniors: [backend-proposal.md](../02_CONTEXT/backend-proposal.md) (Supabase free tier, built for all of CCS). Not decided yet.
 
+## November 24, 2026 (later): README
+
+- README.md rewritten: a short overview, setup, and a Progress section that the Progress Action fills in from the task files (same data as PROGRESS.md). README.md is now Sean-only in the harness check, and README-only commits do not rebuild the site.
+
 ---
 
 ## Format for new entries

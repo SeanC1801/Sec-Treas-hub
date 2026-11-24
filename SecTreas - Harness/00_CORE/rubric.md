@@ -23,7 +23,7 @@ A task counts as finished only when Sean has checked it against this rubric and 
 | 3 | Builds cleanly | `npm run build` passes and the browser console has no red errors. | The pull request and the task log's Checks part. |
 | 4 | Logged | The task log in `04_LOGS/tasks/` has all 7 parts filled in, with proof (file and line, screen and size, or quotes). Nothing written that was not seen. | Reads the task log. |
 | 5 | Senior check | If the task changes what a document says or looks like, Alexis (Nico) or Trizy (Ian) validated it, with the date. | The pull request's Senior check part. |
-| 6 | Stayed in scope | Only the task's own files changed. No rules, scripts, PROGRESS.md, changelog.md, or the other officer's task file. | The pull request's file list (the harness check also blocks most of these). |
+| 6 | Stayed in scope | Only the task's own files changed. No rules, scripts, PROGRESS.md, README.md, changelog.md, or the other officer's task file. | The pull request's file list (the harness check also blocks most of these). |
 | 7 | Safe data | Sample data only. No real receipts, names on new screens, student numbers, ID photos, or keys. | Reads the changes. |
 | 8 | On time | Submitted by the due date, or the delay is in [blocked.md](../03_TRACKING/blocked.md) and Sean agreed to the new date. | PROGRESS.md and blocked.md. |
 

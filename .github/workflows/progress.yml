@@ -1,4 +1,4 @@
-# Rebuilds PROGRESS.md on main from the task files on main and on every treasurer/* and secretary/* branch.
+# Rebuilds PROGRESS.md (and the Progress section of README.md) on main from the task files on main and on every treasurer/* and secretary/* branch.
 # Runs only from main (after a merge, every hour, or by hand), so officer branches never see the token.
 # Uses the PROGRESS_TOKEN secret (Sean's fine-grained token) so it can push to the protected main branch.
 name: Progress
@@ -34,16 +34,16 @@ jobs:
         with:
           node-version: 20
 
-      - name: Build PROGRESS.md
+      - name: Build PROGRESS.md and the README's progress section
         env:
           TZ: Asia/Manila
         run: node scripts/progress.mjs --branches --write
 
-      - name: Commit PROGRESS.md if it changed
+      - name: Commit PROGRESS.md and README.md if they changed
         run: |
-          if git diff --quiet -- PROGRESS.md; then echo "PROGRESS.md is already up to date."; exit 0; fi
+          if git diff --quiet -- PROGRESS.md README.md; then echo "PROGRESS.md and README.md are already up to date."; exit 0; fi
           git config user.name "progress-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add PROGRESS.md
+          git add PROGRESS.md README.md
           git commit -m "Update PROGRESS.md [skip ci]"
           git push origin HEAD:main

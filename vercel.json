@@ -14,5 +14,5 @@
       ]
     }
   ],
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':(exclude)PROGRESS.md' ':(exclude)SecTreas - Harness'"
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':(exclude)PROGRESS.md' ':(exclude)README.md' ':(exclude)SecTreas - Harness'"
 }

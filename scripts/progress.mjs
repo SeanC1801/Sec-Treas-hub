@@ -101,4 +101,19 @@ for (const p of people) {
 }
 md += `\n## How this file is made\n\n- Each row comes from a task heading (like \`## T1. ...\`) and its \`- Due:\`, \`- Status:\`, \`- From:\` and \`- Pull request:\` lines.\n- A GitHub Action rebuilds it on main every hour and after every merge, reading main and every officer branch ("Read from" shows which). A branch only counts for its own task, and "verified" only counts from main.\n- "Days left" is counted from the day the file was generated, in Manila time.\n`;
 writeFileSync(join(root, OUT), md);
-console.log(`${OUT} written (${people.map((p) => `${p.who}: ${p.tasks.size} tasks`).join(", ")}${USE_BRANCHES ? ", branches read" : ""}).`);
+
+// The Action (--write) also refreshes the "Progress" block in README.md, between the PROGRESS markers.
+let readmeNote = "";
+if (OUT === "PROGRESS.md") {
+  const readmePath = join(root, "README.md");
+  let readme = ""; try { readme = readFileSync(readmePath, "utf8"); } catch {}
+  const START = "<!-- PROGRESS:START -->", END = "<!-- PROGRESS:END -->";
+  const a = readme.indexOf(START), b = readme.indexOf(END);
+  if (a !== -1 && b > a) {
+    const body = md.slice(md.indexOf("## Summary"), md.indexOf("\n## How this file is made")).trim().replace(/^## /gm, "### ");
+    const block = `${START}\n_Updated ${today}. A task is finished only when Sean has verified it against the [rubric](SecTreas%20-%20Harness/00_CORE/rubric.md)._\n\n${body}\n${END}`;
+    writeFileSync(readmePath, readme.slice(0, a) + block + readme.slice(b + END.length));
+    readmeNote = " and README.md";
+  }
+}
+console.log(`${OUT}${readmeNote} written (${people.map((p) => `${p.who}: ${p.tasks.size} tasks`).join(", ")}${USE_BRANCHES ? ", branches read" : ""}).`);
