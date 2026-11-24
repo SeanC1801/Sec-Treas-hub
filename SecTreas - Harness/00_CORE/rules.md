@@ -210,7 +210,7 @@ You choose your deadline plan once, at the start. The dates are in [timeline.md]
 
 Sean follows your progress in one file at the top of the repository: [PROGRESS.md](../../PROGRESS.md). It shows every task: who, due date, status, days left, when it was submitted and verified, the pull request, and where the status was read from.
 
-1. You never edit or commit `PROGRESS.md`. A GitHub Action rebuilds it on `main` every hour and after every merge. It reads your task file on `main` and on your branches, so your progress shows within the hour, even before Sean merges.
+1. You never edit or commit `PROGRESS.md` or `README.md`. A GitHub Action rebuilds `PROGRESS.md`, and the Progress section of `README.md`, on `main` every hour and after every merge. It reads your task file on `main` and on your branches, so your progress shows within the hour, even before Sean merges.
 2. What you do keep up to date is your task file. Each task has these lines, and Claude updates them:
    - `- Due: YYYY-MM-DD (<weekday>, Plan A or B)`, or "not set yet" until you choose a plan,
    - `- Status:` one of
@@ -235,7 +235,7 @@ Sean checks that your progress is real. Two things do this.
 It runs from `main`, so it cannot be changed by a pull request. It marks your pull request red, and blocks the merge, if:
 
 1. `PROGRESS.md` is changed.
-2. `.github/`, `scripts/`, `.gitignore`, the rubric or `changelog.md` is changed (only Sean may).
+2. `.github/`, `scripts/`, `.gitignore`, `README.md`, the rubric or `changelog.md` is changed (only Sean may).
 3. A task is set to "verified" (only Sean may).
 4. The branch is not named `treasurer/T<n>-...` or `secretary/S<n>-...`, or the pull request title does not include the task number.
 5. You changed the other officer's task file.
