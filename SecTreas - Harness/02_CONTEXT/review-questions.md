@@ -22,7 +22,7 @@ How the AI asks:
    - "Can you finish all your tasks by Monday, November 30 (Plan A), or will you follow the soft deadline and finish before December 15 (Plan B)? Like: 'Plan A' or 'Plan B.'"
    - If they are unsure, show them the dates for both plans from [timeline.md](../01_SPECS/timeline.md).
    - Write the answer at the top of their task file, and write each task's due date from the timeline ([rules.md](../00_CORE/rules.md), parts 11 and 12). These changes go on their T0 or S0 branch; [PROGRESS.md](../../PROGRESS.md) picks them up within the hour.
-4. Say which task is due next and how many days are left. Like: "Your next task is T0, due Wednesday, November 25: 1 day left."
+4. Show all their tasks: run `npm run progress` and show their section of `PROGRESS.preview.md` as a table (Task, Title, Due, Status, Days left), copied exactly. Then say which is due next. Like: "Here are all your tasks. Next is T0, due Wednesday, November 25: 1 day left." Do this at the start of every session, not only the first.
 
 ## Step 2. Open the hub
 

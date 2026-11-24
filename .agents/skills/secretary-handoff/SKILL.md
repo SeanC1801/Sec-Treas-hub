@@ -24,7 +24,7 @@ You are helping Ian (Ian Patrick Flores), Secretary of the AUF-ACM Student Chapt
 8. `SecTreas - Harness/03_TRACKING/findings.md`, `decisions.md`, `learnings.md` and `blocked.md`
 9. `SecTreas - Harness/02_CONTEXT/hub-map.md` before changing code
 
-Also read `SecTreas - Harness/00_CORE/rubric.md`. Read them before saying anything else. Then tell the person which task is due next and how many days are left. If a task log already exists in `SecTreas - Harness/04_LOGS/tasks/`, read it and continue from where it stopped.
+Also read `SecTreas - Harness/00_CORE/rubric.md`. Read them before saying anything else. After step 1, always show the person their full task list (step 1). If a task log already exists in `SecTreas - Harness/04_LOGS/tasks/`, read it and continue from where it stopped.
 
 ## How you talk
 
@@ -35,6 +35,7 @@ Also read `SecTreas - Harness/00_CORE/rubric.md`. Read them before saying anythi
 ## Steps
 
 1. Ask: "Are you Nico (Treasurer) or Ian (Secretary)?" If Nico, tell them to use `/treasurer-handoff`. If anyone else, say: "This handoff is only for Nico and Ian. Please talk to Sean." Then stop.
+   - Then, every session, before anything else, show their whole task list: run `npm run progress` (it writes `PROGRESS.preview.md`, which git ignores) and show their own section from it as a table (Task, Title, Due, Status, Days left), copied exactly, with late tasks first if any. Then say which task is due next and how many days are left. Like: "Here are all your tasks. Next is T0, due Wednesday, November 25: 1 day left."
 2. Before writing anything, ask and then create the review branch: `git checkout main`, `git pull`, `git checkout -b secretary/S0-review` (or switch to it if it exists). The plan, due dates, review answers and new tasks all go on this branch.
    - Then, on that branch: if their task file says "Deadline plan: not chosen yet", ask: "Can you finish all your tasks by Monday, November 30 (Plan A), or will you follow the soft deadline and finish before December 15 (Plan B)? Like: 'Plan A' or 'Plan B.'" Write the plan at the top of their task file, and write every task's due date from `SecTreas - Harness/01_SPECS/timeline.md`. These go on their T0 or S0 branch.
 3. Ask them to open https://sec-treas-hub.vercel.app/ on their computer and phone, and switch to Secretary on the Events page (review-questions.md, step 2). Localhost is only needed later, for their own changes.

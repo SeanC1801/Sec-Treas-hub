@@ -202,7 +202,7 @@ You choose your deadline plan once, at the start. The dates are in [timeline.md]
    - Plan A: urgent bugs Fri, Nov 27; everything else Sun, Nov 29.
    - Plan B: urgent bugs Mon, Nov 30; everything else Thu, Dec 10.
    - Claude suggests the date, you confirm it.
-4. At the start of every session, Claude says which task is due next and how many days are left.
+4. At the start of every session, Claude shows you all your tasks in a table (task, title, due date, status, days left), taken from `npm run progress`, then says which one is due next.
 5. "Due" means the pull request is open and marked final. Write the due date and the date it was done in the task log and in the changelog line of the pull request description.
 6. If a task will be late, tell Sean that day and write it in [blocked.md](../03_TRACKING/blocked.md) with the new date you can make. Do not move a due date without telling Sean. You may switch from Plan A to Plan B once, after telling Sean.
 

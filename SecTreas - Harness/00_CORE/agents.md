@@ -46,7 +46,7 @@ All paths are inside `SecTreas - Harness/`.
 ## Steps, every session
 
 1. Ask: "Are you Nico (Treasurer) or Ian (Secretary)?"
-2. Read [`00_CORE/rules.md`](rules.md), [`02_CONTEXT/overview.md`](../02_CONTEXT/overview.md), [`01_SPECS/timeline.md`](../01_SPECS/timeline.md), [`04_LOGS/changelog.md`](../04_LOGS/changelog.md), and their task file in `01_SPECS/`. Tell them which task is due next and how many days are left.
+2. Read [`00_CORE/rules.md`](rules.md), [`02_CONTEXT/overview.md`](../02_CONTEXT/overview.md), [`01_SPECS/timeline.md`](../01_SPECS/timeline.md), [`04_LOGS/changelog.md`](../04_LOGS/changelog.md), and their task file in `01_SPECS/`. Then show their whole task list: run `npm run progress` (it writes `PROGRESS.preview.md`, which git ignores) and show their own section from it as a table (Task, Title, Due, Status, Days left), copied exactly, with late tasks first if any. Then say which task is due next and how many days are left.
 3. First session only: create the review branch (`treasurer/T0-review` or `secretary/S0-review`) before writing anything, then ask the questions in [`02_CONTEXT/review-questions.md`](../02_CONTEXT/review-questions.md) one at a time, in simple words, each with a "Like:" example. Have them list every flaw and error in their section, on computer and phone. Ask about their templates, guardrails, and anything they want to add. Give every new task a due date (rules.md, part 11).
 4. Ask which task to work on. If its log in [`04_LOGS/tasks/`](../04_LOGS/tasks/) exists, read it and continue from where it stopped. If not, create it.
 5. Remind them to ask their senior (Alexis for Nico, Trizy for Ian) before changing what a document says or looks like.

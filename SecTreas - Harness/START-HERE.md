@@ -9,6 +9,7 @@ This folder is a guide for you and Claude Code. It helps you finish your side of
 Claude reads these files and then:
 
 - asks you simple questions about your side of the hub, on your computer and your phone,
+- shows you all your tasks, with due dates and status, at the start of every session,
 - writes down every flaw, error and idea you find as a task,
 - asks about the templates you use for your documents,
 - asks if you want guardrails (rules the AI must always follow),

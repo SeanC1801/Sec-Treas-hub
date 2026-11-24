@@ -42,7 +42,7 @@ Sean plans the backend with the seniors, from their suggestions, starting from [
 
 ## Daily rules
 
-- At the start of each session, Claude says which task is due next and how many days are left.
+- At the start of each session, Claude shows all your tasks with their due dates and status, then says which is due next.
 - Claude keeps your task file's Due and Status lines up to date, and you push them on your branch. [PROGRESS.md](../../PROGRESS.md) updates on its own within the hour ([rules.md](../00_CORE/rules.md), part 12).
 - A task counts as finished only when Sean verifies it against the [rubric](../00_CORE/rubric.md) ([rules.md](../00_CORE/rules.md), part 13).
 - At the end of each day you work, update your task log in `04_LOGS/tasks/`.
